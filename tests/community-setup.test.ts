@@ -120,6 +120,21 @@ describe('community profile write planning', () => {
     })
   })
 
+  test('normalizes existing paths before comparing overwrite targets', () => {
+    const files = [{ relativePath: 'CLAUDE.community.md', content: 'profile' }]
+
+    expect(planProfileWrites({
+      outputDir: './community-profile',
+      files,
+      existingFiles: new Set(['./community-profile/CLAUDE.community.md']),
+      force: false,
+    })).toEqual({
+      ok: false,
+      writes: [],
+      existing: ['community-profile/CLAUDE.community.md'],
+    })
+  })
+
   test('allows overwrite with force', () => {
     const files = [{ relativePath: 'CLAUDE.community.md', content: 'profile' }]
 

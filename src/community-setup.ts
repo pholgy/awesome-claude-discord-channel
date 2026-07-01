@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, join, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const MODULE_DIR = dirname(fileURLToPath(import.meta.url))
@@ -130,6 +130,10 @@ function renderTemplate(template: string, values: Record<string, string>): strin
   return template.replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, (_, key: string) => values[key] ?? '')
 }
 
+function normalizeProfilePath(path: string): string {
+  return normalize(path).replace(/\\/g, '/')
+}
+
 export function renderCommunityProfile(input: CommunitySetupInput): RenderedProfileFile[] {
   const pack = readPackMetadata(input.packId)
   const serverName = safeMarkdownValue(input.serverName)
@@ -163,13 +167,16 @@ export function planProfileWrites(input: {
   existingFiles: Set<string>
   force: boolean
 }): ProfileWritePlan {
+  const normalizedExistingFiles = new Set(
+    Array.from(input.existingFiles, path => normalizeProfilePath(path)),
+  )
   const writes = input.files.map(file => ({
-    path: join(input.outputDir, file.relativePath).replace(/\\/g, '/'),
+    path: normalizeProfilePath(join(input.outputDir, file.relativePath)),
     content: file.content,
   }))
   const existing = writes
     .map(write => write.path)
-    .filter(path => input.existingFiles.has(path))
+    .filter(path => normalizedExistingFiles.has(path))
 
   if (existing.length > 0 && !input.force) {
     return { ok: false, writes: [], existing }

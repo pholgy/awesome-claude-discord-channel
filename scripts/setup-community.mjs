@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
-import { dirname } from 'node:path'
+import { dirname, join } from 'node:path'
 import { createInterface } from 'node:readline/promises'
 import { stdin, stdout } from 'node:process'
 import {
@@ -51,6 +51,17 @@ function parseArgs(argv) {
   return out
 }
 
+function missingRequiredFlags(args) {
+  const missing = []
+  if (!args.packId) missing.push('--pack')
+  if (!args.serverName?.trim()) missing.push('--server-name')
+  return missing
+}
+
+function canPrompt() {
+  return Boolean(stdin.isTTY && stdout.isTTY)
+}
+
 async function promptForMissingArgs(args) {
   if (args.packId && args.serverName) return args
 
@@ -76,7 +87,7 @@ async function promptForMissingArgs(args) {
 function existingTargetFiles(outputDir, files) {
   return new Set(
     files
-      .map(file => `${outputDir.replace(/\\/g, '/')}/${file.relativePath}`)
+      .map(file => join(outputDir, file.relativePath).replace(/\\/g, '/'))
       .filter(path => existsSync(path)),
   )
 }
@@ -87,7 +98,18 @@ try {
     process.stdout.write(help())
     process.exit(0)
   }
-  args = await promptForMissingArgs(args)
+  const missingFlags = missingRequiredFlags(args)
+  if (missingFlags.length > 0) {
+    if (!canPrompt()) {
+      process.stderr.write(
+        `setup:community failed:\n- missing required arguments in non-interactive mode: ${missingFlags.join(', ')}\n`,
+      )
+      process.stderr.write('Provide the missing flags or run the command in an interactive terminal.\n')
+      process.exit(1)
+    }
+
+    args = await promptForMissingArgs(args)
+  }
 
   const input = {
     packId: args.packId,
