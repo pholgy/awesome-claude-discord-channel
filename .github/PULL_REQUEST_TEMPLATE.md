@@ -10,8 +10,8 @@ PRs should link an existing issue. Open the issue first so scope is visible befo
 
 ## Test plan
 
-- [ ] `npm test`
 - [ ] `bun install --frozen-lockfile`
+- [ ] `bun run verify`
 - [ ] `bun build server.ts --target=bun --outfile /tmp/awesome-discord-server-check.js`
 
 ## Notes

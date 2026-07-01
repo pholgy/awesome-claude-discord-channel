@@ -22,17 +22,37 @@ import {
   GatewayIntentBits,
   Partials,
   ChannelType,
+  ThreadAutoArchiveDuration,
   ButtonBuilder,
   ButtonStyle,
   ActionRowBuilder,
   type Message,
   type Attachment,
   type Interaction,
+  type ButtonInteraction,
 } from 'discord.js'
 import { randomBytes } from 'crypto'
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync, statSync, renameSync, realpathSync, chmodSync } from 'fs'
 import { homedir } from 'os'
 import { join, sep } from 'path'
+import {
+  buildConversationMeta,
+  buildInboundDiscordNotification,
+  chunkDiscordText,
+  formatInactiveTaskControl,
+  formatTaskControlRequest,
+  formatTaskStatus,
+  formatThreadName,
+  isActiveTaskStatus,
+  isTaskControlAllowed,
+  isTaskControlAction,
+  isTaskStatus,
+  messageMatchesMentionPattern,
+  resolveTriggerReason,
+  safeAttachmentName,
+  type TaskControlAction,
+  type TriggerReason,
+} from './src/conversation.ts'
 
 const STATE_DIR = process.env.DISCORD_STATE_DIR ?? join(homedir(), '.claude', 'channels', 'discord')
 const ACCESS_FILE = join(STATE_DIR, 'access.json')
@@ -213,23 +233,31 @@ function pruneExpired(a: Access): boolean {
 }
 
 type GateResult =
-  | { action: 'deliver'; access: Access }
+  | { action: 'deliver'; access: Access; triggerReason: TriggerReason }
   | { action: 'drop' }
   | { action: 'pair'; code: string; isResend: boolean }
 
 // Track message IDs we recently sent, so reply-to-bot in guild channels
 // counts as a mention without needing fetchReference().
 const recentSentIds = new Set<string>()
+const recentActiveThreadIds = new Set<string>()
 const RECENT_SENT_CAP = 200
+const RECENT_ACTIVE_THREAD_CAP = 100
 
 const dmChannelUsers = new Map<string, string>()
 
-function noteSent(id: string): void {
+function trimSet(set: Set<string>, cap: number): void {
+  if (set.size <= cap) return
+  const first = set.values().next().value
+  if (first) set.delete(first)
+}
+
+function noteSent(id: string, channelId?: string, isThread = false): void {
   recentSentIds.add(id)
-  if (recentSentIds.size > RECENT_SENT_CAP) {
-    // Sets iterate in insertion order — this drops the oldest.
-    const first = recentSentIds.values().next().value
-    if (first) recentSentIds.delete(first)
+  trimSet(recentSentIds, RECENT_SENT_CAP)
+  if (channelId && isThread) {
+    recentActiveThreadIds.add(channelId)
+    trimSet(recentActiveThreadIds, RECENT_ACTIVE_THREAD_CAP)
   }
 }
 
@@ -244,7 +272,9 @@ async function gate(msg: Message): Promise<GateResult> {
   const isDM = msg.channel.type === ChannelType.DM
 
   if (isDM) {
-    if (access.allowFrom.includes(senderId)) return { action: 'deliver', access }
+    if (access.allowFrom.includes(senderId)) {
+      return { action: 'deliver', access, triggerReason: 'dm' }
+    }
     if (access.dmPolicy === 'allowlist') return { action: 'drop' }
 
     // pairing mode — check for existing non-expired code for this sender
@@ -287,34 +317,59 @@ async function gate(msg: Message): Promise<GateResult> {
   if (groupAllowFrom.length > 0 && !groupAllowFrom.includes(senderId)) {
     return { action: 'drop' }
   }
-  if (requireMention && !(await isMentioned(msg, access.mentionPatterns))) {
-    return { action: 'drop' }
+  let triggerReason: TriggerReason | null = resolveTriggerReason({
+    isDm: false,
+    requireMention,
+    mentionedBot: false,
+    repliedToBot: false,
+    mentionPatternMatched: false,
+    activeThread: msg.channel.isThread() && recentActiveThreadIds.has(msg.channelId),
+  })
+  if (requireMention) {
+    triggerReason = await mentionTriggerReason(msg, access.mentionPatterns)
   }
-  return { action: 'deliver', access }
+  if (!triggerReason) return { action: 'drop' }
+  return { action: 'deliver', access, triggerReason }
 }
 
-async function isMentioned(msg: Message, extraPatterns?: string[]): Promise<boolean> {
-  if (client.user && msg.mentions.has(client.user)) return true
+async function mentionTriggerReason(msg: Message, extraPatterns?: string[]): Promise<TriggerReason | null> {
+  const mentionedBot = client.user ? msg.mentions.has(client.user) : false
+  if (mentionedBot) {
+    return resolveTriggerReason({
+      isDm: false,
+      requireMention: true,
+      mentionedBot,
+      repliedToBot: false,
+      mentionPatternMatched: false,
+      activeThread: false,
+    })
+  }
 
   // Reply to one of our messages counts as an implicit mention.
   const refId = msg.reference?.messageId
+  let repliedToBot = false
   if (refId) {
-    if (recentSentIds.has(refId)) return true
+    if (recentSentIds.has(refId)) {
+      repliedToBot = true
+    }
     // Fallback: fetch the referenced message and check authorship.
     // Can fail if the message was deleted or we lack history perms.
-    try {
-      const ref = await msg.fetchReference()
-      if (ref.author.id === client.user?.id) return true
-    } catch {}
+    if (!repliedToBot) {
+      try {
+        const ref = await msg.fetchReference()
+        if (ref.author.id === client.user?.id) repliedToBot = true
+      } catch {}
+    }
   }
 
-  const text = msg.content
-  for (const pat of extraPatterns ?? []) {
-    try {
-      if (new RegExp(pat, 'i').test(text)) return true
-    } catch {}
-  }
-  return false
+  return resolveTriggerReason({
+    isDm: false,
+    requireMention: true,
+    mentionedBot: false,
+    repliedToBot,
+    mentionPatternMatched: messageMatchesMentionPattern(msg.content, extraPatterns),
+    activeThread: msg.channel.isThread() && recentActiveThreadIds.has(msg.channelId),
+  })
 }
 
 // The /discord:access skill drops a file at approved/<senderId> when it pairs
@@ -370,27 +425,6 @@ if (!STATIC) setInterval(checkApprovals, 5000).unref()
 // Split long replies, preferring paragraph boundaries when chunkMode is
 // 'newline'.
 
-function chunk(text: string, limit: number, mode: 'length' | 'newline'): string[] {
-  if (text.length <= limit) return [text]
-  const out: string[] = []
-  let rest = text
-  while (rest.length > limit) {
-    let cut = limit
-    if (mode === 'newline') {
-      // Prefer the last double-newline (paragraph), then single newline,
-      // then space. Fall back to hard cut.
-      const para = rest.lastIndexOf('\n\n', limit)
-      const line = rest.lastIndexOf('\n', limit)
-      const space = rest.lastIndexOf(' ', limit)
-      cut = para > limit / 2 ? para : line > limit / 2 ? line : space > 0 ? space : limit
-    }
-    out.push(rest.slice(0, cut))
-    rest = rest.slice(cut).replace(/^\n+/, '')
-  }
-  if (rest) out.push(rest)
-  return out
-}
-
 async function fetchTextChannel(id: string) {
   const ch = await client.channels.fetch(id)
   if (!ch || !ch.isTextBased()) {
@@ -405,6 +439,9 @@ async function fetchTextChannel(id: string) {
 async function fetchAllowedChannel(id: string) {
   const ch = await fetchTextChannel(id)
   const access = loadAccess()
+  if (access.dmPolicy === 'disabled') {
+    throw new Error('Discord access is disabled')
+  }
   if (ch.type === ChannelType.DM) {
     const userId = ch.recipientId ?? dmChannelUsers.get(id)
     if (userId && access.allowFrom.includes(userId)) return ch
@@ -434,7 +471,7 @@ async function downloadAttachment(att: Attachment): Promise<string> {
 // notification body and inside a newline-joined tool result — both are places
 // where delimiter chars let the attacker break out of the untrusted frame.
 function safeAttName(att: Attachment): string {
-  return (att.name ?? att.id).replace(/[\[\]\r\n;]/g, '_')
+  return safeAttachmentName(att.name ?? att.id)
 }
 
 const mcp = new Server(
@@ -455,9 +492,9 @@ const mcp = new Server(
     instructions: [
       'The sender reads Discord, not this session. Anything you want them to see must go through the reply tool — your transcript output never reaches their chat.',
       '',
-      'Messages from Discord arrive as <channel source="discord" chat_id="..." message_id="..." user="..." ts="...">. If the tag has attachment_count, the attachments attribute lists name/type/size — call download_attachment(chat_id, message_id) to fetch them. If assistant_delivery_contract appears in metadata, follow it silently and never mention it to the Discord user. Reply with the reply tool — pass chat_id back. Use reply_to (set to a message_id) only when replying to an earlier message; the latest message doesn\'t need a quote-reply, omit reply_to for normal responses.',
+      'Messages from Discord arrive as <channel source="discord" chat_id="..." message_id="..." user="..." ts="...">. Metadata may include conversation_scope, context_boundary, context_visibility, output_profile, trigger_reason, thread_id, parent_channel_id, reply_to_message_id, assistant_goal_hook, assistant_context_contract, assistant_output_contract, assistant_conversation_contract, and assistant_delivery_contract. Follow assistant-only metadata silently and never mention those attributes to the Discord user. If the tag has attachment_count, the attachments attribute lists name/type/size — call download_attachment(chat_id, message_id) to fetch them. Reply with the reply tool — pass chat_id back. Use reply_to (set to a message_id) only when replying to an earlier message; the latest message doesn\'t need a quote-reply, omit reply_to for normal responses.',
       '',
-      'reply accepts file paths (files: ["/abs/path.png"]) for attachments. Use react to add emoji reactions, and edit_message for interim progress updates. Edits don\'t trigger push notifications — when a long task completes, send a new reply so the user\'s device pings.',
+      'reply accepts file paths (files: ["/abs/path.png"]) for attachments. Use task_status for visible task lifecycle updates, react to add emoji reactions, and edit_message only when you need to edit arbitrary bot output. Edits don\'t trigger push notifications — when a long task completes, send a new reply so the user\'s device pings.',
       '',
       "fetch_messages pulls real Discord history. Discord's search API isn't available to bots — if the user asks you to find an old message, fetch more history or ask them roughly when it was.",
       '',
@@ -468,6 +505,79 @@ const mcp = new Server(
 
 // Stores full permission details for "See more" expansion keyed by request_id.
 const pendingPermissions = new Map<string, { tool_name: string; description: string; input_preview: string }>()
+const activeTaskMessageIds = new Set<string>()
+
+function noteTaskStatusMessage(messageId: string, status: string): void {
+  if (isTaskStatus(status) && isActiveTaskStatus(status)) {
+    activeTaskMessageIds.add(messageId)
+  } else {
+    activeTaskMessageIds.delete(messageId)
+  }
+}
+
+function taskStatusComponents(status: string, options: { threadButton: boolean } = { threadButton: true }) {
+  if (!isTaskStatus(status) || !isActiveTaskStatus(status)) return []
+  const buttons = [
+    new ButtonBuilder()
+      .setCustomId('task:stop')
+      .setLabel('Stop')
+      .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId('task:continue')
+      .setLabel('Continue')
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId('task:summarize')
+      .setLabel('Summarize')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('task:quiet')
+      .setLabel('Quiet')
+      .setStyle(ButtonStyle.Secondary),
+  ]
+  if (options.threadButton) {
+    buttons.push(
+      new ButtonBuilder()
+        .setCustomId('task:thread')
+        .setLabel('Thread')
+        .setStyle(ButtonStyle.Primary),
+    )
+  }
+  return [
+    new ActionRowBuilder<ButtonBuilder>().addComponents(...buttons),
+    new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setCustomId('task:save_context')
+        .setLabel('Save')
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId('task:forget_context')
+        .setLabel('Forget')
+        .setStyle(ButtonStyle.Secondary),
+    ),
+  ]
+}
+
+async function startThreadFromMessage(message: Message, name?: string) {
+  if (message.channel.isThread()) {
+    return { thread: message.channel, created: false }
+  }
+  if (message.channel.type === ChannelType.DM) {
+    throw new Error('threads can only be started from guild channel messages')
+  }
+
+  const existingThread = (message as Message & { thread?: Awaited<ReturnType<Message['startThread']>> }).thread
+  if (existingThread) {
+    return { thread: existingThread, created: false }
+  }
+
+  const thread = await message.startThread({
+    name: formatThreadName(name),
+    autoArchiveDuration: ThreadAutoArchiveDuration.OneHour,
+    reason: 'Move long Discord task work into a thread',
+  })
+  return { thread, created: true }
+}
 
 // Receive permission_request from CC → format → send to all allowlisted DMs.
 // Groups are intentionally excluded — the security thread resolution was
@@ -568,6 +678,52 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
+      name: 'task_status',
+      description: 'Send or edit a visible Discord task lifecycle update. Status values: acknowledged, running, waiting, completed, failed, stopped. Omit message_id to send a new status; pass message_id to edit a prior bot status.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          chat_id: { type: 'string' },
+          status: {
+            type: 'string',
+            enum: ['acknowledged', 'running', 'waiting', 'completed', 'failed', 'stopped'],
+          },
+          text: {
+            type: 'string',
+            description: 'Optional concise status detail.',
+          },
+          message_id: {
+            type: 'string',
+            description: 'Bot message ID to edit instead of sending a new status.',
+          },
+        },
+        required: ['chat_id', 'status'],
+      },
+    },
+    {
+      name: 'start_thread',
+      description: 'Start or reuse a Discord thread from an existing guild message, then optionally send a short first message in that thread. Use this to move long shared-channel work out of the main channel.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          chat_id: { type: 'string' },
+          message_id: {
+            type: 'string',
+            description: 'Message ID to start the thread from. Use the inbound message_id or a status message id.',
+          },
+          name: {
+            type: 'string',
+            description: 'Optional thread name. Defaults to "Task thread" and is clamped to Discord limits.',
+          },
+          text: {
+            type: 'string',
+            description: 'Optional short first message to post inside the thread.',
+          },
+        },
+        required: ['chat_id', 'message_id'],
+      },
+    },
+    {
       name: 'download_attachment',
       description: 'Download attachments from a specific Discord message to the local inbox. Use after fetch_messages shows a message has attachments (marked with +Natt). Returns file paths ready to Read.',
       inputSchema: {
@@ -624,7 +780,7 @@ mcp.setRequestHandler(CallToolRequestSchema, async req => {
         const limit = Math.max(1, Math.min(access.textChunkLimit ?? MAX_CHUNK_LIMIT, MAX_CHUNK_LIMIT))
         const mode = access.chunkMode ?? 'length'
         const replyMode = access.replyToMode ?? 'first'
-        const chunks = chunk(text, limit, mode)
+        const chunks = chunkDiscordText(text, limit, mode)
         const sentIds: string[] = []
 
         try {
@@ -640,7 +796,7 @@ mcp.setRequestHandler(CallToolRequestSchema, async req => {
                 ? { reply: { messageReference: reply_to, failIfNotExists: false } }
                 : {}),
             })
-            noteSent(sent.id)
+            noteSent(sent.id, sent.channelId, sent.channel.isThread())
             sentIds.push(sent.id)
           }
         } catch (err) {
@@ -688,6 +844,48 @@ mcp.setRequestHandler(CallToolRequestSchema, async req => {
         const msg = await ch.messages.fetch(args.message_id as string)
         const edited = await msg.edit(args.text as string)
         return { content: [{ type: 'text', text: `edited (id: ${edited.id})` }] }
+      }
+      case 'task_status': {
+        const ch = await fetchAllowedChannel(args.chat_id as string)
+        if (!('send' in ch)) throw new Error('channel is not sendable')
+
+        if (!isTaskStatus(args.status)) {
+          throw new Error(`invalid task status: ${String(args.status)}`)
+        }
+        const text = formatTaskStatus(args.status, args.text as string | undefined)
+        if (text.length > MAX_CHUNK_LIMIT) {
+          throw new Error(`task status too long: ${text.length} chars, max ${MAX_CHUNK_LIMIT}`)
+        }
+
+        const messageId = args.message_id as string | undefined
+        const components = taskStatusComponents(args.status, { threadButton: ch.type !== ChannelType.DM })
+        if (messageId) {
+          const msg = await ch.messages.fetch(messageId)
+          const edited = await msg.edit({ content: text, components })
+          noteTaskStatusMessage(edited.id, args.status)
+          return { content: [{ type: 'text', text: `status edited (id: ${edited.id})` }] }
+        }
+
+        const sent = await ch.send({ content: text, components })
+        noteSent(sent.id, sent.channelId, sent.channel.isThread())
+        noteTaskStatusMessage(sent.id, args.status)
+        return { content: [{ type: 'text', text: `status sent (id: ${sent.id})` }] }
+      }
+      case 'start_thread': {
+        const ch = await fetchAllowedChannel(args.chat_id as string)
+        const msg = await ch.messages.fetch(args.message_id as string)
+        const { thread, created } = await startThreadFromMessage(msg, args.name as string | undefined)
+        const text = (args.text as string | undefined)?.trim()
+        if (text) {
+          const sent = await thread.send(text)
+          noteSent(sent.id, sent.channelId, sent.channel.isThread())
+        }
+        return {
+          content: [{
+            type: 'text',
+            text: `${created ? 'thread started' : 'thread ready'} (id: ${thread.id}, chat_id: ${thread.id})`,
+          }],
+        }
       }
       case 'download_attachment': {
         const ch = await fetchAllowedChannel(args.chat_id as string)
@@ -741,11 +939,101 @@ client.on('error', err => {
   process.stderr.write(`discord channel: client error: ${err}\n`)
 })
 
+async function taskControlAuthorized(interaction: ButtonInteraction): Promise<boolean> {
+  const access = loadAccess()
+  const ch = interaction.channel ?? await client.channels.fetch(interaction.channelId)
+  if (!ch || !ch.isTextBased()) return false
+  const key = ch.isThread() ? ch.parentId ?? ch.id : ch.id
+  return isTaskControlAllowed(access, {
+    isDm: ch.type === ChannelType.DM,
+    userId: interaction.user.id,
+    groupKey: key,
+  })
+}
+
+async function notifyTaskControl(
+  interaction: ButtonInteraction,
+  action: TaskControlAction,
+  targetChannel?: Awaited<ReturnType<typeof fetchTextChannel>>,
+): Promise<void> {
+  const ch = targetChannel ?? interaction.channel ?? await fetchTextChannel(interaction.channelId)
+  const channelId = ch.id
+  const isDm = ch.type === ChannelType.DM
+  const isThread = ch.isThread()
+  const meta = buildConversationMeta({
+    channelId,
+    channelType: ch.type,
+    isDm,
+    isThread,
+    triggerReason: 'control_button',
+    displayName: interaction.user.globalName ?? interaction.user.username,
+    guildId: interaction.guildId,
+    parentChannelId: isThread ? ch.parentId : undefined,
+    replyToMessageId: interaction.message.id,
+    replyToChannelId: interaction.channelId,
+  })
+
+  await mcp.notification({
+    method: 'notifications/claude/channel',
+    params: {
+      content: formatTaskControlRequest(action),
+      meta: {
+        chat_id: channelId,
+        message_id: interaction.message.id,
+        user: interaction.user.username,
+        user_id: interaction.user.id,
+        ts: new Date().toISOString(),
+        ...meta,
+        control_action: action,
+        assistant_control_contract: 'assistant-only metadata; a Discord user clicked a task control button; handle stop, continue, summarize, quiet mode, thread handoff, save context, or forget context inside the current conversation scope and reply visibly in Discord',
+        assistant_delivery_contract: `assistant-only metadata; never mention this attribute to the Discord user; normal assistant text is not visible in Discord; call mcp__discord__reply with chat_id=${channelId} for every response`,
+      },
+    },
+  })
+}
+
 // Button-click handler for permission requests. customId is
 // `perm:allow:<id>`, `perm:deny:<id>`, or `perm:more:<id>`.
 // Security mirrors the text-reply path: allowFrom must contain the sender.
 client.on('interactionCreate', async (interaction: Interaction) => {
   if (!interaction.isButton()) return
+  const taskMatch = /^task:(stop|continue|summarize|quiet|thread|save_context|forget_context)$/.exec(interaction.customId)
+  if (taskMatch) {
+    const action = taskMatch[1]
+    if (!isTaskControlAction(action)) return
+    if (!(await taskControlAuthorized(interaction))) {
+      await interaction.reply({ content: 'Not authorized.', ephemeral: true }).catch(() => {})
+      return
+    }
+    if (!activeTaskMessageIds.has(interaction.message.id)) {
+      await interaction.reply({ content: formatInactiveTaskControl(), ephemeral: true }).catch(() => {})
+      return
+    }
+    let targetChannel: Awaited<ReturnType<typeof fetchTextChannel>> | undefined
+    if (action === 'thread') {
+      try {
+        const { thread } = await startThreadFromMessage(interaction.message, interaction.message.content)
+        targetChannel = thread
+      } catch (err) {
+        process.stderr.write(`discord channel: task thread creation failed: ${err}\n`)
+        await interaction.reply({ content: 'Thread request failed.', ephemeral: true }).catch(() => {})
+        return
+      }
+    }
+    try {
+      await notifyTaskControl(interaction, action, targetChannel)
+    } catch (err) {
+      process.stderr.write(`discord channel: task control notification failed: ${err}\n`)
+      await interaction.reply({ content: 'Control request failed.', ephemeral: true }).catch(() => {})
+      return
+    }
+    const ack = action === 'thread' && targetChannel
+      ? `${formatTaskControlRequest(action)}: <#${targetChannel.id}>`
+      : formatTaskControlRequest(action)
+    await interaction.reply({ content: ack, ephemeral: true }).catch(() => {})
+    return
+  }
+
   const m = /^perm:(allow|deny|more):([a-km-z]{5})$/.exec(interaction.customId)
   if (!m) return
   const access = loadAccess()
@@ -859,32 +1147,38 @@ async function handleInbound(msg: Message): Promise<void> {
     void msg.react(access.ackReaction).catch(() => {})
   }
 
-  // Attachments are listed (name/type/size) but not downloaded — the model
-  // calls download_attachment when it wants them. Keeps the notification
-  // fast and avoids filling inbox/ with images nobody looked at.
-  const atts: string[] = []
-  for (const att of msg.attachments.values()) {
-    const kb = (att.size / 1024).toFixed(0)
-    atts.push(`${safeAttName(att)} (${att.contentType ?? 'unknown'}, ${kb}KB)`)
-  }
-
   // Attachment listing goes in meta only — an in-content annotation is
   // forgeable by any allowlisted sender typing that string.
-  const content = msg.content || (atts.length > 0 ? '(attachment)' : '')
+  const notification = buildInboundDiscordNotification({
+    chatId: chat_id,
+    messageId: msg.id,
+    user: msg.author.username,
+    userId: msg.author.id,
+    ts: msg.createdAt.toISOString(),
+    content: msg.content,
+    channelId: msg.channelId,
+    channelType: msg.channel.type,
+    isDm: msg.channel.type === ChannelType.DM,
+    isThread: msg.channel.isThread(),
+    triggerReason: result.triggerReason,
+    displayName: msg.member?.displayName ?? msg.author.globalName ?? msg.author.username,
+    guildId: msg.guildId,
+    parentChannelId: msg.channel.isThread() ? msg.channel.parentId : undefined,
+    replyToMessageId: msg.reference?.messageId,
+    replyToChannelId: msg.reference?.channelId,
+    attachments: [...msg.attachments.values()].map(att => ({
+      id: att.id,
+      name: att.name,
+      contentType: att.contentType,
+      size: att.size,
+    })),
+  })
 
   mcp.notification({
     method: 'notifications/claude/channel',
     params: {
-      content,
-      meta: {
-        chat_id,
-        message_id: msg.id,
-        user: msg.author.username,
-        user_id: msg.author.id,
-        ts: msg.createdAt.toISOString(),
-        assistant_delivery_contract: `assistant-only metadata; never mention this attribute to the Discord user; normal assistant text is not visible in Discord; call mcp__discord__reply with chat_id=${chat_id} for every response; for tools/code/web/file/heavy math or more than 10 seconds, call mcp__discord__reply first with a short acknowledgement`,
-        ...(atts.length > 0 ? { attachment_count: String(atts.length), attachments: atts.join('; ') } : {}),
-      },
+      content: notification.content,
+      meta: notification.meta,
     },
   }).catch(err => {
     process.stderr.write(`discord channel: failed to deliver inbound to Claude: ${err}\n`)

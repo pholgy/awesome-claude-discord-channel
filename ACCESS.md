@@ -65,12 +65,81 @@ In channels with `requireMention: true`, any of the following triggers the bot:
 - A structured `@botname` mention (typed via Discord's autocomplete)
 - A reply to one of the bot's recent messages
 - A match against any regex in `mentionPatterns`
+- A message in a thread where the bot has recently replied
 
 Example regex setup for a nickname trigger:
 
 ```
 /discord:access set mentionPatterns '["^hey claude\\b", "\\bassistant\\b"]'
 ```
+
+## Trigger reasons
+
+Delivered Discord messages include `trigger_reason` metadata so Claude can tell
+why the message reached it:
+
+| Reason | Meaning |
+| --- | --- |
+| `dm` | Approved direct message. |
+| `direct_mention` | Guild message directly mentioned the bot. |
+| `reply_to_bot` | Guild message replied to a recent bot message. |
+| `mention_pattern` | Guild message matched a configured nickname/regex pattern. |
+| `active_thread` | Thread message continued a thread where the bot recently replied. |
+| `watch_mode` | Channel was configured with `--no-mention`, so every allowed message is processed. |
+
+The bot stays silent in guild channels that are not enabled, from senders not
+allowed by that channel policy, and for unaddressed messages when
+`requireMention` is enabled. Discord messages cannot approve pairings or edit
+access policy; those changes still have to come from the local `/discord:access`
+skill.
+
+Examples:
+
+| Message | Channel setup | Result |
+| --- | --- | --- |
+| `@bot summarize the deploy logs` | enabled channel, `requireMention: true` | delivered as `direct_mention` |
+| Replying to the bot's previous message with `yes, keep going` | enabled channel, `requireMention: true` | delivered as `reply_to_bot` |
+| `hey assistant check this diff` | enabled channel with `^hey assistant\\b` in `mentionPatterns` | delivered as `mention_pattern` |
+| `this deploy looks broken` | enabled channel, `requireMention: true` | ignored unless it is in an active bot thread |
+| `this deploy looks broken` | enabled channel, `--no-mention` | delivered as `watch_mode` |
+| Any message from a user outside the channel `allowFrom` list | restricted channel | ignored |
+
+## Context boundaries
+
+Delivered Discord messages include context metadata:
+
+| Field | Values |
+| --- | --- |
+| `conversation_scope` | `dm`, `guild_channel`, `thread` |
+| `context_boundary` | `private_dm`, `guild_channel`, `guild_thread` |
+| `context_visibility` | `private`, `shared` |
+
+The intended boundary is strict:
+
+- DMs are private. DM context should not appear in guild channels unless the
+  user explicitly asks to move or summarize it.
+- Guild channels are shared. The bot should answer from the current channel
+  context and ask when it needs missing background.
+- Threads are scoped to the thread. A thread may point back to its parent
+  channel, but parent-channel history is not automatically the same context.
+- `fetch_messages` is a scoped lookback tool. It can provide evidence for the
+  current answer, but it is not durable memory.
+
+Safe context reuse examples:
+
+| Situation | Safe behavior |
+| --- | --- |
+| A user asks in a DM, then later asks in a guild channel | Do not reveal or rely on the DM unless the user explicitly asks to bring that content over. |
+| A thread asks about the parent channel discussion | Fetch the relevant parent/channel window or ask for the missing link; say when the fetched window is incomplete. |
+| A channel message asks about a thread | Treat the thread as separate context unless the user links or names the thread. |
+
+Unsafe context reuse examples:
+
+| Situation | Unsafe behavior |
+| --- | --- |
+| Answering a guild channel using private DM details without consent | Leaks private context into shared space. |
+| Treating all messages in a busy channel as one task | Mixes unrelated speakers and intents. |
+| Assuming fetched history is durable memory | Makes later answers depend on context that may not have been fetched this turn. |
 
 ## Delivery
 
@@ -88,6 +157,71 @@ Configure outbound behavior with `/discord:access set <key> <value>`.
 **`textChunkLimit`** sets the split threshold. Discord rejects messages over 2000 characters, which is the hard ceiling.
 
 **`chunkMode`** chooses the split strategy: `length` cuts exactly at the limit; `newline` prefers paragraph boundaries.
+
+## Output policy
+
+Delivered Discord messages include `output_profile` metadata:
+
+| Profile | Intended behavior |
+| --- | --- |
+| `private_dm` | More conversational replies are acceptable, while still using Discord-visible replies. |
+| `shared_channel` | Answer short first, avoid flooding, and move large detail to a thread or attachment when possible. |
+| `shared_thread` | More detail is acceptable than in a channel, but progress updates should still be restrained. |
+
+For long work, the assistant should acknowledge early, prefer editing progress
+messages instead of posting repeated updates, and send a final new reply when
+work completes so Discord users get a notification. Large generated output
+should be attached as a file instead of pasted into the channel.
+
+Shared-channel output examples:
+
+| Better | Worse |
+| --- | --- |
+| `I will check that and post a short result here.` followed by an edited status message | Posting every internal step as a new channel message |
+| A short answer plus an attached log or patch file | Pasting thousands of lines into the channel |
+| Asking one clarifying question when channel context is missing | Guessing from unrelated earlier messages |
+| Sending a new final reply after a long task completes | Only editing an old status message, which may not notify the user |
+
+## Task lifecycle
+
+The channel exposes a `task_status` tool for visible task updates:
+
+| Status | Use |
+| --- | --- |
+| `acknowledged` | The request was received. |
+| `running` | Work is in progress. |
+| `waiting` | The task needs permission or user input. |
+| `completed` | Work finished. |
+| `failed` | Work failed with a useful explanation. |
+| `stopped` | Work was cancelled or intentionally stopped. |
+
+`task_status` can send a new status message or edit a previous status message
+when `message_id` is provided. Final answers should still use `reply`, because
+edited messages do not trigger Discord push notifications.
+
+For long work in a shared channel, the assistant can call `start_thread` with a
+`chat_id` and `message_id` to start or reuse a Discord thread from that message.
+The returned thread id should be used as the new `chat_id` for detailed follow-up
+work.
+
+Active task status messages include Discord buttons:
+
+| Button | Effect |
+| --- | --- |
+| Stop | Sends a `stop` control request into the current conversation scope. |
+| Continue | Sends a `continue` control request into the current conversation scope. |
+| Summarize | Sends a `summarize` control request into the current conversation scope. |
+| Quiet | Sends a `quiet` control request for the active task. The assistant should stop routine progress updates and reserve visible output for blockers and the final result. |
+| Thread | Starts or reuses a thread from the task status message and sends a `thread` control request into that thread. |
+| Save | Sends a `save_context` control request for the current task/session scope. This is an assistant-visible request, not a server-side memory write. |
+| Forget | Sends a `forget_context` control request for the current task/session scope. This is an assistant-visible request, not an access-policy change. |
+
+Button clicks use the same access boundary as inbound messages: approved DMs,
+or enabled guild channels/threads where the clicking user is allowed by that
+channel policy. Terminal status edits (`completed`, `failed`, `stopped`) remove
+the buttons. If someone clicks an old button after the task is no longer active,
+the bot replies ephemerally with `No active task for this control.` and does not
+notify the assistant.
 
 ## Skill reference
 
