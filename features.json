@@ -100,7 +100,7 @@
     "issue_refs": ["#6", "#8"],
     "blocked_by": ["INT-04", "INT-07"],
     "verify_steps": ["bun run verify"],
-    "passes": false
+    "passes": true
   },
   {
     "id": "INT-12",

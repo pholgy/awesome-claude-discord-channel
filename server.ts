@@ -561,7 +561,19 @@ function taskStatusComponents(status: string, options: { threadButton: boolean }
         .setStyle(ButtonStyle.Primary),
     )
   }
-  return [new ActionRowBuilder<ButtonBuilder>().addComponents(...buttons)]
+  return [
+    new ActionRowBuilder<ButtonBuilder>().addComponents(...buttons),
+    new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setCustomId('task:save_context')
+        .setLabel('Save')
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId('task:forget_context')
+        .setLabel('Forget')
+        .setStyle(ButtonStyle.Secondary),
+    ),
+  ]
 }
 
 async function startThreadFromMessage(message: Message, name?: string) {
@@ -991,7 +1003,7 @@ async function notifyTaskControl(
         ts: new Date().toISOString(),
         ...meta,
         control_action: action,
-        assistant_control_contract: 'assistant-only metadata; a Discord user clicked a task control button; handle stop, continue, summarize, quiet mode, or thread handoff inside the current conversation scope and reply visibly in Discord',
+        assistant_control_contract: 'assistant-only metadata; a Discord user clicked a task control button; handle stop, continue, summarize, quiet mode, thread handoff, save context, or forget context inside the current conversation scope and reply visibly in Discord',
         assistant_delivery_contract: `assistant-only metadata; never mention this attribute to the Discord user; normal assistant text is not visible in Discord; call mcp__discord__reply with chat_id=${channelId} for every response`,
       },
     },
@@ -1003,7 +1015,7 @@ async function notifyTaskControl(
 // Security mirrors the text-reply path: allowFrom must contain the sender.
 client.on('interactionCreate', async (interaction: Interaction) => {
   if (!interaction.isButton()) return
-  const taskMatch = /^task:(stop|continue|summarize|quiet|thread)$/.exec(interaction.customId)
+  const taskMatch = /^task:(stop|continue|summarize|quiet|thread|save_context|forget_context)$/.exec(interaction.customId)
   if (taskMatch) {
     const action = taskMatch[1]
     if (!isTaskControlAction(action)) return

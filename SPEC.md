@@ -156,8 +156,8 @@ Task lifecycle:
 
 Task controls:
 
-- Active `task_status` messages include Stop, Continue, Summarize, Quiet, and
-  Thread buttons.
+- Active `task_status` messages include Stop, Continue, Summarize, Quiet,
+  Thread, Save, and Forget buttons.
 - Control clicks are authorized against the same DM allowlist or enabled guild
   channel policy used for inbound Discord messages.
 - A control click is delivered to the assistant as an assistant-visible channel
@@ -171,8 +171,9 @@ Task controls:
 - Thread handoff starts or reuses a Discord thread from the task status message
   and delivers the control notification with the thread id as the active
   `chat_id`.
-- Save/forget context controls are planned follow-up controls after task/session
-  state exists.
+- Save/Forget controls are assistant-visible requests inside the current
+  task/session scope. They do not mutate server-side access policy or pretend to
+  provide durable memory storage.
 
 Foundation status:
 
@@ -183,7 +184,6 @@ Foundation status:
   work is tracked separately before external connectors start:
   - server-level simulated harness coverage for full inbound/outbound flows,
     attachment metadata, chunking, and MCP notifications.
-  - save and forget context controls after task/session state exists.
   - concrete docs examples for trigger decisions, context reuse, and shared
     channel output.
 

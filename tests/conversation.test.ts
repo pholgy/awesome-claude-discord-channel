@@ -130,6 +130,8 @@ describe('task controls', () => {
     expect(isTaskControlAction('summarize')).toBe(true)
     expect(isTaskControlAction('quiet')).toBe(true)
     expect(isTaskControlAction('thread')).toBe(true)
+    expect(isTaskControlAction('save_context')).toBe(true)
+    expect(isTaskControlAction('forget_context')).toBe(true)
     expect(isTaskControlAction('delete')).toBe(false)
   })
 
@@ -139,6 +141,8 @@ describe('task controls', () => {
     expect(formatTaskControlRequest('summarize')).toBe('Summary requested')
     expect(formatTaskControlRequest('quiet')).toBe('Quiet mode requested')
     expect(formatTaskControlRequest('thread')).toBe('Thread requested')
+    expect(formatTaskControlRequest('save_context')).toBe('Save context requested')
+    expect(formatTaskControlRequest('forget_context')).toBe('Forget context requested')
   })
 
   test('formats inactive control feedback', () => {

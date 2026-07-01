@@ -15,8 +15,23 @@ export type ContextVisibility = 'private' | 'shared'
 export type OutputProfile = 'private_dm' | 'shared_channel' | 'shared_thread'
 export type TaskStatus = 'acknowledged' | 'running' | 'waiting' | 'completed' | 'failed' | 'stopped'
 export const TASK_STATUSES: TaskStatus[] = ['acknowledged', 'running', 'waiting', 'completed', 'failed', 'stopped']
-export type TaskControlAction = 'stop' | 'continue' | 'summarize' | 'quiet' | 'thread'
-export const TASK_CONTROL_ACTIONS: TaskControlAction[] = ['stop', 'continue', 'summarize', 'quiet', 'thread']
+export type TaskControlAction =
+  | 'stop'
+  | 'continue'
+  | 'summarize'
+  | 'quiet'
+  | 'thread'
+  | 'save_context'
+  | 'forget_context'
+export const TASK_CONTROL_ACTIONS: TaskControlAction[] = [
+  'stop',
+  'continue',
+  'summarize',
+  'quiet',
+  'thread',
+  'save_context',
+  'forget_context',
+]
 export type AccessMode = 'pairing' | 'allowlist' | 'disabled'
 export type TaskControlAccessPolicy = {
   dmPolicy: AccessMode
@@ -159,6 +174,8 @@ export function formatTaskControlRequest(action: TaskControlAction): string {
     summarize: 'Summary requested',
     quiet: 'Quiet mode requested',
     thread: 'Thread requested',
+    save_context: 'Save context requested',
+    forget_context: 'Forget context requested',
   }
   return label[action]
 }

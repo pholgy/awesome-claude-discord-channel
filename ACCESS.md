@@ -213,6 +213,8 @@ Active task status messages include Discord buttons:
 | Summarize | Sends a `summarize` control request into the current conversation scope. |
 | Quiet | Sends a `quiet` control request for the active task. The assistant should stop routine progress updates and reserve visible output for blockers and the final result. |
 | Thread | Starts or reuses a thread from the task status message and sends a `thread` control request into that thread. |
+| Save | Sends a `save_context` control request for the current task/session scope. This is an assistant-visible request, not a server-side memory write. |
+| Forget | Sends a `forget_context` control request for the current task/session scope. This is an assistant-visible request, not an access-policy change. |
 
 Button clicks use the same access boundary as inbound messages: approved DMs,
 or enabled guild channels/threads where the clicking user is allowed by that
