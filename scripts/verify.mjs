@@ -13,6 +13,8 @@ const agents = read('AGENTS.md');
 const accessDocs = read('ACCESS.md');
 const externalDocs = read('EXTERNAL_CONNECTORS.md');
 const external = read('src/external.ts');
+const customActionDocs = read('CUSTOM_ACTIONS.md');
+const customActions = read('src/custom-actions.ts');
 const workflow = read('.github/workflows/verify.yml');
 
 assert.equal(packageJson.name, 'awesome-claude-discord-channel');
@@ -130,6 +132,7 @@ assert.match(readme, /Project direction/);
 assert.match(readme, /Metadata-only visible-reply delivery contract/);
 assert.match(readme, /anthropics\/claude-plugins-official/);
 assert.match(readme, /EXTERNAL_CONNECTORS\.md/);
+assert.match(readme, /CUSTOM_ACTIONS\.md/);
 assert.doesNotMatch(readme, /long-running\/resumed sessions/);
 
 assert.match(agents, /better Claude Discord channel/);
@@ -154,5 +157,12 @@ assert.match(externalDocs, /## Approval Rules/);
 assert.match(externalDocs, /## Audit Fields/);
 assert.match(externalDocs, /External action denied/);
 assert.ok(features.some(feature => feature.id === 'EXT-01' && feature.passes === true));
+assert.match(customActions, /normalizeCustomActionConfig/);
+assert.match(customActions, /buildCustomActionRequestShape/);
+assert.match(customActions, /redactCustomActionHeaders/);
+assert.match(customActionDocs, /## Config Shape/);
+assert.match(customActionDocs, /## Request Shape/);
+assert.match(customActionDocs, /## Secret Handling/);
+assert.ok(features.some(feature => feature.id === 'EXT-02' && feature.passes === true));
 
 console.log('verify: all assertions passed');
