@@ -10,6 +10,7 @@ const pluginJson = JSON.parse(read('.claude-plugin/plugin.json'));
 const features = JSON.parse(read('features.json'));
 const readme = read('README.md');
 const agents = read('AGENTS.md');
+const accessDocs = read('ACCESS.md');
 const workflow = read('.github/workflows/verify.yml');
 
 assert.equal(packageJson.name, 'awesome-claude-discord-channel');
@@ -107,6 +108,10 @@ assert.match(agents, /assistant_delivery_contract/);
 
 assert.ok(features.some(feature => feature.id === 'INT-08' && feature.passes === false));
 assert.ok(features.some(feature => feature.id === 'INT-09' && feature.passes === false));
+assert.ok(features.some(feature => feature.id === 'INT-12' && feature.passes === true));
 assert.ok(features.some(feature => feature.id === 'EXT-01' && feature.blocked_by?.includes('INT-12')));
+assert.match(accessDocs, /Safe context reuse examples/);
+assert.match(accessDocs, /Unsafe context reuse examples/);
+assert.match(accessDocs, /Shared-channel output examples/);
 
 console.log('verify: all assertions passed');

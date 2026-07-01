@@ -93,6 +93,17 @@ allowed by that channel policy, and for unaddressed messages when
 access policy; those changes still have to come from the local `/discord:access`
 skill.
 
+Examples:
+
+| Message | Channel setup | Result |
+| --- | --- | --- |
+| `@bot summarize the deploy logs` | enabled channel, `requireMention: true` | delivered as `direct_mention` |
+| Replying to the bot's previous message with `yes, keep going` | enabled channel, `requireMention: true` | delivered as `reply_to_bot` |
+| `hey assistant check this diff` | enabled channel with `^hey assistant\\b` in `mentionPatterns` | delivered as `mention_pattern` |
+| `this deploy looks broken` | enabled channel, `requireMention: true` | ignored unless it is in an active bot thread |
+| `this deploy looks broken` | enabled channel, `--no-mention` | delivered as `watch_mode` |
+| Any message from a user outside the channel `allowFrom` list | restricted channel | ignored |
+
 ## Context boundaries
 
 Delivered Discord messages include context metadata:
@@ -113,6 +124,22 @@ The intended boundary is strict:
   channel, but parent-channel history is not automatically the same context.
 - `fetch_messages` is a scoped lookback tool. It can provide evidence for the
   current answer, but it is not durable memory.
+
+Safe context reuse examples:
+
+| Situation | Safe behavior |
+| --- | --- |
+| A user asks in a DM, then later asks in a guild channel | Do not reveal or rely on the DM unless the user explicitly asks to bring that content over. |
+| A thread asks about the parent channel discussion | Fetch the relevant parent/channel window or ask for the missing link; say when the fetched window is incomplete. |
+| A channel message asks about a thread | Treat the thread as separate context unless the user links or names the thread. |
+
+Unsafe context reuse examples:
+
+| Situation | Unsafe behavior |
+| --- | --- |
+| Answering a guild channel using private DM details without consent | Leaks private context into shared space. |
+| Treating all messages in a busy channel as one task | Mixes unrelated speakers and intents. |
+| Assuming fetched history is durable memory | Makes later answers depend on context that may not have been fetched this turn. |
 
 ## Delivery
 
@@ -145,6 +172,15 @@ For long work, the assistant should acknowledge early, prefer editing progress
 messages instead of posting repeated updates, and send a final new reply when
 work completes so Discord users get a notification. Large generated output
 should be attached as a file instead of pasted into the channel.
+
+Shared-channel output examples:
+
+| Better | Worse |
+| --- | --- |
+| `I will check that and post a short result here.` followed by an edited status message | Posting every internal step as a new channel message |
+| A short answer plus an attached log or patch file | Pasting thousands of lines into the channel |
+| Asking one clarifying question when channel context is missing | Guessing from unrelated earlier messages |
+| Sending a new final reply after a long task completes | Only editing an old status message, which may not notify the user |
 
 ## Task lifecycle
 

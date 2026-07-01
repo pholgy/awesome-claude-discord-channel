@@ -109,7 +109,7 @@
     "issue_refs": ["#4", "#6", "#9"],
     "blocked_by": ["INT-03", "INT-04", "INT-05"],
     "verify_steps": ["bun run verify"],
-    "passes": false
+    "passes": true
   },
   {
     "id": "EXT-01",
