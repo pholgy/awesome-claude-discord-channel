@@ -165,6 +165,21 @@ Task controls:
 - Quiet mode, save/forget context, and move-to-thread controls are planned
   follow-up controls after task/session state exists.
 
+Foundation status:
+
+- The current internal foundation covers metadata, trigger reasons, context and
+  output contracts, the `task_status` lifecycle tool, and first task controls
+  for stop, continue, and summarize.
+- It does not finish every child issue acceptance item. The remaining internal
+  work is tracked separately before external connectors start:
+  - server-level simulated harness coverage for full inbound/outbound flows,
+    attachment metadata, chunking, and MCP notifications.
+  - quiet mode and no-active-task behavior for controls.
+  - move-to-thread behavior for long shared-channel work.
+  - save and forget context controls after task/session state exists.
+  - concrete docs examples for trigger decisions, context reuse, and shared
+    channel output.
+
 ## Internal Implementation Order
 
 1. #5 - Add inbound conversation metadata and metadata-only goal hook.
@@ -207,18 +222,25 @@ or the dependency is explicitly waived.
 6. #15 - Tasks, calendar, and reminders usecases.
 7. #16 - Operations, deploy, and status usecases.
 
-## First PR Scope
+## Foundation PR Scope
 
-The first PR should stay intentionally small:
+The foundation PR should stay reviewable and avoid external connectors:
 
 - Add `SPEC.md` and `features.json`.
 - Add inbound conversation metadata and goal hooks.
+- Add explicit trigger reasons and context/output contracts.
+- Add the `task_status` lifecycle tool.
+- Add first task controls for Stop, Continue, and Summarize.
+- Add focused Bun tests around the pure conversation and control helpers.
 - Update verifier checks.
 
-Out of scope for the first PR:
+Out of scope for the foundation PR:
 
 - New Discord slash commands.
 - External connectors.
 - Changing access policy.
 - Creating long-running task state.
 - Refactoring the full server into modules.
+- Quiet mode, save/forget context, and move-to-thread controls.
+- Server-level simulation of the full Discord gateway and MCP notification
+  path.

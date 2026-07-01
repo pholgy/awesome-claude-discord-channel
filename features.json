@@ -21,15 +21,15 @@
   {
     "id": "INT-02",
     "phase": "internal",
-    "description": "Add a simulated Discord conversation test harness.",
+    "description": "Add pure conversation behavior tests for trigger, metadata, output, lifecycle, and control helper logic.",
     "issue_refs": ["#10"],
-    "verify_steps": ["bun run verify"],
+    "verify_steps": ["bun test tests/conversation.test.ts", "bun run verify"],
     "passes": true
   },
   {
     "id": "INT-03",
     "phase": "internal",
-    "description": "Implement explicit trigger and participation reasons.",
+    "description": "Implement explicit trigger reasons for DMs, mentions, replies, nickname patterns, active threads, and watch mode.",
     "issue_refs": ["#4"],
     "verify_steps": ["bun run verify"],
     "passes": true
@@ -37,7 +37,7 @@
   {
     "id": "INT-04",
     "phase": "internal",
-    "description": "Define and enforce DM, channel, thread, and task context isolation boundaries.",
+    "description": "Add DM, channel, and thread context boundary metadata and assistant context contracts.",
     "issue_refs": ["#6"],
     "verify_steps": ["bun run verify"],
     "passes": true
@@ -45,7 +45,7 @@
   {
     "id": "INT-05",
     "phase": "internal",
-    "description": "Define shared-channel output and noise-control policy.",
+    "description": "Add shared-channel output policy metadata and docs for short-first replies, progress edits, final replies, and attachments.",
     "issue_refs": ["#9"],
     "verify_steps": ["bun run verify"],
     "passes": true
@@ -53,7 +53,7 @@
   {
     "id": "INT-06",
     "phase": "internal",
-    "description": "Add Discord-native long-task lifecycle behavior.",
+    "description": "Add the Discord task_status lifecycle tool for acknowledged, running, waiting, completed, failed, and stopped states.",
     "issue_refs": ["#7"],
     "verify_steps": ["bun run verify"],
     "passes": true
@@ -61,17 +61,62 @@
   {
     "id": "INT-07",
     "phase": "internal",
-    "description": "Add Discord user controls for active conversations.",
+    "description": "Add first Discord task control buttons for stop, continue, and summarize with access-bound authorization.",
     "issue_refs": ["#8"],
     "verify_steps": ["bun run verify"],
     "passes": true
+  },
+  {
+    "id": "INT-08",
+    "phase": "internal",
+    "description": "Expand the simulated harness to cover server-level Discord event delivery, attachment metadata, chunking, and MCP notifications.",
+    "issue_refs": ["#10"],
+    "blocked_by": ["INT-02"],
+    "verify_steps": ["bun run verify"],
+    "passes": false
+  },
+  {
+    "id": "INT-09",
+    "phase": "internal",
+    "description": "Define and implement quiet mode plus no-active-task behavior for Discord controls.",
+    "issue_refs": ["#8", "#9"],
+    "blocked_by": ["INT-07"],
+    "verify_steps": ["bun run verify"],
+    "passes": false
+  },
+  {
+    "id": "INT-10",
+    "phase": "internal",
+    "description": "Define and implement move-to-thread behavior for long shared-channel work.",
+    "issue_refs": ["#7", "#8", "#9"],
+    "blocked_by": ["INT-06", "INT-07"],
+    "verify_steps": ["bun run verify"],
+    "passes": false
+  },
+  {
+    "id": "INT-11",
+    "phase": "internal",
+    "description": "Define save and forget context controls after task/session state exists.",
+    "issue_refs": ["#6", "#8"],
+    "blocked_by": ["INT-04", "INT-07"],
+    "verify_steps": ["bun run verify"],
+    "passes": false
+  },
+  {
+    "id": "INT-12",
+    "phase": "internal",
+    "description": "Add concrete docs examples for trigger decisions, safe/unsafe context reuse, and shared-channel output.",
+    "issue_refs": ["#4", "#6", "#9"],
+    "blocked_by": ["INT-03", "INT-04", "INT-05"],
+    "verify_steps": ["bun run verify"],
+    "passes": false
   },
   {
     "id": "EXT-01",
     "phase": "external",
     "description": "Define external connector safety and approval model after internal behavior lands.",
     "issue_refs": ["#12"],
-    "blocked_by": ["INT-01", "INT-02", "INT-03", "INT-04", "INT-05", "INT-06", "INT-07"],
+    "blocked_by": ["INT-01", "INT-02", "INT-03", "INT-04", "INT-05", "INT-06", "INT-07", "INT-08", "INT-09", "INT-10", "INT-11", "INT-12"],
     "verify_steps": ["bun run verify"],
     "passes": false
   },

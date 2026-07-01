@@ -7,6 +7,7 @@ const server = read('server.ts');
 const conversation = read('src/conversation.ts');
 const packageJson = JSON.parse(read('package.json'));
 const pluginJson = JSON.parse(read('.claude-plugin/plugin.json'));
+const features = JSON.parse(read('features.json'));
 const readme = read('README.md');
 const agents = read('AGENTS.md');
 const workflow = read('.github/workflows/verify.yml');
@@ -103,5 +104,9 @@ assert.doesNotMatch(readme, /long-running\/resumed sessions/);
 assert.match(agents, /better Claude Discord channel/);
 assert.match(agents, /issue-first and PR-only/);
 assert.match(agents, /assistant_delivery_contract/);
+
+assert.ok(features.some(feature => feature.id === 'INT-08' && feature.passes === false));
+assert.ok(features.some(feature => feature.id === 'INT-09' && feature.passes === false));
+assert.ok(features.some(feature => feature.id === 'EXT-01' && feature.blocked_by?.includes('INT-12')));
 
 console.log('verify: all assertions passed');
