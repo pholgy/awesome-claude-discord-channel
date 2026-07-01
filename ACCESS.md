@@ -206,11 +206,14 @@ Active task status messages include Discord buttons:
 | Stop | Sends a `stop` control request into the current conversation scope. |
 | Continue | Sends a `continue` control request into the current conversation scope. |
 | Summarize | Sends a `summarize` control request into the current conversation scope. |
+| Quiet | Sends a `quiet` control request for the active task. The assistant should stop routine progress updates and reserve visible output for blockers and the final result. |
 
 Button clicks use the same access boundary as inbound messages: approved DMs,
 or enabled guild channels/threads where the clicking user is allowed by that
 channel policy. Terminal status edits (`completed`, `failed`, `stopped`) remove
-the buttons.
+the buttons. If someone clicks an old button after the task is no longer active,
+the bot replies ephemerally with `No active task for this control.` and does not
+notify the assistant.
 
 ## Skill reference
 

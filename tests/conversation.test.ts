@@ -6,6 +6,7 @@ import {
   contextBoundary,
   contextVisibility,
   formatTaskControlRequest,
+  formatInactiveTaskControl,
   formatTaskStatus,
   isActiveTaskStatus,
   isTaskControlAction,
@@ -126,6 +127,7 @@ describe('task controls', () => {
     expect(isTaskControlAction('stop')).toBe(true)
     expect(isTaskControlAction('continue')).toBe(true)
     expect(isTaskControlAction('summarize')).toBe(true)
+    expect(isTaskControlAction('quiet')).toBe(true)
     expect(isTaskControlAction('delete')).toBe(false)
   })
 
@@ -133,6 +135,11 @@ describe('task controls', () => {
     expect(formatTaskControlRequest('stop')).toBe('Stop requested')
     expect(formatTaskControlRequest('continue')).toBe('Continue requested')
     expect(formatTaskControlRequest('summarize')).toBe('Summary requested')
+    expect(formatTaskControlRequest('quiet')).toBe('Quiet mode requested')
+  })
+
+  test('formats inactive control feedback', () => {
+    expect(formatInactiveTaskControl()).toBe('No active task for this control.')
   })
 
   test('blocks controls when access is globally disabled', () => {

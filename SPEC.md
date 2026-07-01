@@ -156,14 +156,20 @@ Task lifecycle:
 
 Task controls:
 
-- Active `task_status` messages include Stop, Continue, and Summarize buttons.
+- Active `task_status` messages include Stop, Continue, Summarize, and Quiet
+  buttons.
 - Control clicks are authorized against the same DM allowlist or enabled guild
   channel policy used for inbound Discord messages.
 - A control click is delivered to the assistant as an assistant-visible channel
   notification with `trigger_reason=control_button` and `control_action`.
 - Terminal lifecycle statuses remove controls when edited.
-- Quiet mode, save/forget context, and move-to-thread controls are planned
-  follow-up controls after task/session state exists.
+- Control clicks on stale or terminal task messages get an ephemeral
+  no-active-task response instead of notifying the assistant.
+- Quiet mode asks the assistant to stop posting routine progress updates for
+  the active task and reserve visible Discord output for blockers and the final
+  result.
+- Save/forget context and move-to-thread controls are planned follow-up
+  controls after task/session state exists.
 
 Foundation status:
 
@@ -174,7 +180,6 @@ Foundation status:
   work is tracked separately before external connectors start:
   - server-level simulated harness coverage for full inbound/outbound flows,
     attachment metadata, chunking, and MCP notifications.
-  - quiet mode and no-active-task behavior for controls.
   - move-to-thread behavior for long shared-channel work.
   - save and forget context controls after task/session state exists.
   - concrete docs examples for trigger decisions, context reuse, and shared
