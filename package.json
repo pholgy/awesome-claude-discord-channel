@@ -1,0 +1,17 @@
+{
+  "name": "awesome-claude-discord-channel",
+  "version": "0.1.0",
+  "description": "A Discord channel plugin for Claude Code with a hardened visible-reply delivery contract.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": "./server.ts",
+  "scripts": {
+    "start": "bun install --no-summary && bun server.ts",
+    "verify": "node scripts/verify.mjs",
+    "test": "node scripts/verify.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "discord.js": "^14.14.0"
+  }
+}

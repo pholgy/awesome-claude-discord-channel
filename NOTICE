@@ -1,0 +1,7 @@
+Awesome Claude Discord Channel
+
+This project is derived from the Discord channel plugin in:
+https://github.com/anthropics/claude-plugins-official/tree/main/external_plugins/discord
+
+The upstream source is licensed under Apache-2.0. This fork preserves that
+license and adds a metadata-only delivery contract for Discord-visible replies.

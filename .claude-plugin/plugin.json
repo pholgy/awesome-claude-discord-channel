@@ -1,0 +1,11 @@
+{
+  "name": "awesome-discord-channel",
+  "description": "Awesome Discord channel for Claude Code with access control and a hardened visible-reply delivery contract.",
+  "version": "0.1.0",
+  "keywords": [
+    "discord",
+    "messaging",
+    "channel",
+    "mcp"
+  ]
+}
