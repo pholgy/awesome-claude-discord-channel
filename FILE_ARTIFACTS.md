@@ -3,7 +3,7 @@
 Files are a Discord-native workflow: users upload screenshots, PDFs, logs, CSVs,
 and reports, then expect useful output back in the same channel or thread.
 
-Parent issue: #11  
+Parent issue: #11
 Child issue: #17
 
 This document defines the first file/media lane without adding a live storage
