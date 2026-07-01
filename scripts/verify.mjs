@@ -15,6 +15,8 @@ const externalDocs = read('EXTERNAL_CONNECTORS.md');
 const external = read('src/external.ts');
 const customActionDocs = read('CUSTOM_ACTIONS.md');
 const customActions = read('src/custom-actions.ts');
+const knowledgeDocs = read('KNOWLEDGE_SOURCES.md');
+const knowledgeSources = read('src/knowledge-sources.ts');
 const workflow = read('.github/workflows/verify.yml');
 
 assert.equal(packageJson.name, 'awesome-claude-discord-channel');
@@ -133,6 +135,7 @@ assert.match(readme, /Metadata-only visible-reply delivery contract/);
 assert.match(readme, /anthropics\/claude-plugins-official/);
 assert.match(readme, /EXTERNAL_CONNECTORS\.md/);
 assert.match(readme, /CUSTOM_ACTIONS\.md/);
+assert.match(readme, /KNOWLEDGE_SOURCES\.md/);
 assert.doesNotMatch(readme, /long-running\/resumed sessions/);
 
 assert.match(agents, /better Claude Discord channel/);
@@ -164,5 +167,13 @@ assert.match(customActionDocs, /## Config Shape/);
 assert.match(customActionDocs, /## Request Shape/);
 assert.match(customActionDocs, /## Secret Handling/);
 assert.ok(features.some(feature => feature.id === 'EXT-02' && feature.passes === true));
+assert.match(knowledgeSources, /KNOWLEDGE_SOURCE_TYPES/);
+assert.match(knowledgeSources, /knowledgeSourceAllowedInDiscordScope/);
+assert.match(knowledgeSources, /formatKnowledgeCitations/);
+assert.match(knowledgeDocs, /## Source Types/);
+assert.match(knowledgeDocs, /## Citation Behavior/);
+assert.match(knowledgeDocs, /## Context Isolation/);
+assert.match(knowledgeDocs, /Source unavailable: not authorized for this Discord scope/);
+assert.ok(features.some(feature => feature.id === 'EXT-03' && feature.passes === true));
 
 console.log('verify: all assertions passed');

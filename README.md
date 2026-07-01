@@ -49,6 +49,8 @@ See [EXTERNAL_CONNECTORS.md](./EXTERNAL_CONNECTORS.md) for the external
 connector risk, approval, and audit model.
 See [CUSTOM_ACTIONS.md](./CUSTOM_ACTIONS.md) for the generic webhook/custom
 action contract.
+See [KNOWLEDGE_SOURCES.md](./KNOWLEDGE_SOURCES.md) for read-only source-backed
+answer behavior.
 
 1. Create a Discord application and bot in the
    [Discord Developer Portal](https://discord.com/developers/applications).

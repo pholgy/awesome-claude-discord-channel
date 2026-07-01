@@ -136,7 +136,7 @@
     "issue_refs": ["#13"],
     "blocked_by": ["EXT-01"],
     "verify_steps": ["bun run verify"],
-    "passes": false
+    "passes": true
   },
   {
     "id": "EXT-04",
