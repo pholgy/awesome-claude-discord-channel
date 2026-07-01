@@ -163,7 +163,7 @@
     "issue_refs": ["#15"],
     "blocked_by": ["EXT-01"],
     "verify_steps": ["bun run verify"],
-    "passes": false
+    "passes": true
   },
   {
     "id": "EXT-07",
@@ -172,6 +172,6 @@
     "issue_refs": ["#16"],
     "blocked_by": ["EXT-01"],
     "verify_steps": ["bun run verify"],
-    "passes": false
+    "passes": true
   }
 ]
