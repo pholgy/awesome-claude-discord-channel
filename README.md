@@ -45,6 +45,8 @@ tool names stay familiar.
 ## Quick setup
 
 See [ACCESS.md](./ACCESS.md) for the full access-control model.
+See [EXTERNAL_CONNECTORS.md](./EXTERNAL_CONNECTORS.md) for the external
+connector risk, approval, and audit model.
 
 1. Create a Discord application and bot in the
    [Discord Developer Portal](https://discord.com/developers/applications).

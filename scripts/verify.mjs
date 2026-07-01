@@ -11,6 +11,8 @@ const features = JSON.parse(read('features.json'));
 const readme = read('README.md');
 const agents = read('AGENTS.md');
 const accessDocs = read('ACCESS.md');
+const externalDocs = read('EXTERNAL_CONNECTORS.md');
+const external = read('src/external.ts');
 const workflow = read('.github/workflows/verify.yml');
 
 assert.equal(packageJson.name, 'awesome-claude-discord-channel');
@@ -127,6 +129,7 @@ assert.match(readme, /actively maintained, opinionated Discord channel plugin/);
 assert.match(readme, /Project direction/);
 assert.match(readme, /Metadata-only visible-reply delivery contract/);
 assert.match(readme, /anthropics\/claude-plugins-official/);
+assert.match(readme, /EXTERNAL_CONNECTORS\.md/);
 assert.doesNotMatch(readme, /long-running\/resumed sessions/);
 
 assert.match(agents, /better Claude Discord channel/);
@@ -143,5 +146,13 @@ assert.ok(features.filter(feature => feature.phase === 'internal').every(feature
 assert.match(accessDocs, /Safe context reuse examples/);
 assert.match(accessDocs, /Unsafe context reuse examples/);
 assert.match(accessDocs, /Shared-channel output examples/);
+assert.match(external, /ExternalActionRisk/);
+assert.match(external, /externalApprovalRequired/);
+assert.match(external, /buildExternalAuditFields/);
+assert.match(externalDocs, /## Risk Levels/);
+assert.match(externalDocs, /## Approval Rules/);
+assert.match(externalDocs, /## Audit Fields/);
+assert.match(externalDocs, /External action denied/);
+assert.ok(features.some(feature => feature.id === 'EXT-01' && feature.passes === true));
 
 console.log('verify: all assertions passed');
