@@ -17,6 +17,8 @@ const customActionDocs = read('CUSTOM_ACTIONS.md');
 const customActions = read('src/custom-actions.ts');
 const knowledgeDocs = read('KNOWLEDGE_SOURCES.md');
 const knowledgeSources = read('src/knowledge-sources.ts');
+const fileArtifactDocs = read('FILE_ARTIFACTS.md');
+const fileArtifacts = read('src/file-artifacts.ts');
 const workflow = read('.github/workflows/verify.yml');
 
 assert.equal(packageJson.name, 'awesome-claude-discord-channel');
@@ -136,6 +138,7 @@ assert.match(readme, /anthropics\/claude-plugins-official/);
 assert.match(readme, /EXTERNAL_CONNECTORS\.md/);
 assert.match(readme, /CUSTOM_ACTIONS\.md/);
 assert.match(readme, /KNOWLEDGE_SOURCES\.md/);
+assert.match(readme, /FILE_ARTIFACTS\.md/);
 assert.doesNotMatch(readme, /long-running\/resumed sessions/);
 
 assert.match(agents, /better Claude Discord channel/);
@@ -175,5 +178,14 @@ assert.match(knowledgeDocs, /## Citation Behavior/);
 assert.match(knowledgeDocs, /## Context Isolation/);
 assert.match(knowledgeDocs, /Source unavailable: not authorized for this Discord scope/);
 assert.ok(features.some(feature => feature.id === 'EXT-03' && feature.passes === true));
+assert.match(fileArtifacts, /ACCEPTED_FILE_ARTIFACT_WORKFLOWS/);
+assert.match(fileArtifacts, /fileArtifactWithinLimits/);
+assert.match(fileArtifacts, /classifyArtifactDelivery/);
+assert.match(fileArtifacts, /sensitiveArtifactAllowedInScope/);
+assert.match(fileArtifactDocs, /## Accepted Workflows/);
+assert.match(fileArtifactDocs, /## Limits/);
+assert.match(fileArtifactDocs, /## Sensitive Files/);
+assert.match(fileArtifactDocs, /## External Storage Links/);
+assert.ok(features.some(feature => feature.id === 'EXT-04' && feature.passes === true));
 
 console.log('verify: all assertions passed');
