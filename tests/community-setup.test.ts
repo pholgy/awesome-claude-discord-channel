@@ -41,4 +41,14 @@ describe('community setup core', () => {
       'outputDir is required',
     ])
   })
+
+  test('validates supported community pack ids', () => {
+    expect(
+      validateCommunitySetupInput({
+        packId: 'sales-team' as never,
+        serverName: 'Example Community',
+        outputDir: './profile',
+      }),
+    ).toEqual(['invalid packId: sales-team'])
+  })
 })
