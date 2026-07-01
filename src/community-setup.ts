@@ -36,6 +36,15 @@ export type RenderedProfileFile = {
   content: string
 }
 
+export type PlannedProfileWrite = {
+  path: string
+  content: string
+}
+
+export type ProfileWritePlan =
+  | { ok: true; writes: PlannedProfileWrite[]; existing: string[] }
+  | { ok: false; writes: []; existing: string[] }
+
 export const SUPPORTED_COMMUNITY_PACKS: CommunityPackInfo[] = [
   {
     id: 'project-dev',
@@ -146,4 +155,25 @@ export function renderCommunityProfile(input: CommunitySetupInput): RenderedProf
     relativePath,
     content: renderTemplate(readSharedTemplate(relativePath), values).trimEnd() + '\n',
   }))
+}
+
+export function planProfileWrites(input: {
+  outputDir: string
+  files: RenderedProfileFile[]
+  existingFiles: Set<string>
+  force: boolean
+}): ProfileWritePlan {
+  const writes = input.files.map(file => ({
+    path: join(input.outputDir, file.relativePath).replace(/\\/g, '/'),
+    content: file.content,
+  }))
+  const existing = writes
+    .map(write => write.path)
+    .filter(path => input.existingFiles.has(path))
+
+  if (existing.length > 0 && !input.force) {
+    return { ok: false, writes: [], existing }
+  }
+
+  return { ok: true, writes, existing }
 }

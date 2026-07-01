@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import {
+  planProfileWrites,
   SUPPORTED_COMMUNITY_PACKS,
   TARGET_PROFILE_FILES,
   parseWorkflowList,
@@ -97,5 +98,43 @@ describe('community profile rendering', () => {
 
   test('escapes markdown control characters in operator values', () => {
     expect(safeMarkdownValue('`quoted` [link](x)')).toBe('\\`quoted\\` \\[link\\](x)')
+  })
+})
+
+describe('community profile write planning', () => {
+  test('refuses existing files without force and plans zero writes', () => {
+    const files = [
+      { relativePath: 'CLAUDE.community.md', content: 'profile' },
+      { relativePath: 'workflows.md', content: 'workflows' },
+    ]
+
+    expect(planProfileWrites({
+      outputDir: 'community-profile',
+      files,
+      existingFiles: new Set(['community-profile/workflows.md']),
+      force: false,
+    })).toEqual({
+      ok: false,
+      writes: [],
+      existing: ['community-profile/workflows.md'],
+    })
+  })
+
+  test('allows overwrite with force', () => {
+    const files = [{ relativePath: 'CLAUDE.community.md', content: 'profile' }]
+
+    expect(planProfileWrites({
+      outputDir: 'community-profile',
+      files,
+      existingFiles: new Set(['community-profile/CLAUDE.community.md']),
+      force: true,
+    })).toEqual({
+      ok: true,
+      writes: [{
+        path: 'community-profile/CLAUDE.community.md',
+        content: 'profile',
+      }],
+      existing: ['community-profile/CLAUDE.community.md'],
+    })
   })
 })
