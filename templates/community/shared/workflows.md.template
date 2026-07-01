@@ -1,0 +1,24 @@
+# Community Workflows
+
+Community name: {{serverName}}
+Pack: {{packLabel}}
+
+## Summarize Thread
+
+Use when a discussion becomes too long to scan. Reply with a short summary, decisions, open questions, and source message references when available.
+
+## Answer From Docs
+
+Use when a user asks a question that should be grounded in docs or source material. Cite compactly and say when the source is unavailable.
+
+## Draft Issue
+
+Use when Discord discussion should become a GitHub issue. Draft first in Discord; publish only after visible approval.
+
+## Capture Feedback
+
+Use when users share feature requests, complaints, repeated confusion, or product ideas. Summarize the ask, include Discord context, and do not promise roadmap decisions.
+
+## Weekly Recap
+
+Use for community summaries. Keep it factual, short-first, and split long detail into an attachment when needed.
