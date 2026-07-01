@@ -4,7 +4,7 @@ Knowledge sources let Claude answer Discord questions from selected external
 material without turning every answer into a channel flood or mixing private
 sources into public conversation.
 
-Parent issue: #11  
+Parent issue: #11
 Child issue: #13
 
 This lane is read-only by default. It can cite, summarize, refresh, and explain

@@ -4,7 +4,7 @@ Operations workflows let server owners ask Discord whether a bot or service is
 healthy, what version is deployed, what recent logs say, or whether a deploy,
 restart, or rollback should happen.
 
-Parent issue: #11  
+Parent issue: #11
 Child issue: #16
 
 This is the riskiest external lane because it can mutate live systems. The first
