@@ -17,6 +17,12 @@ export type TaskStatus = 'acknowledged' | 'running' | 'waiting' | 'completed' | 
 export const TASK_STATUSES: TaskStatus[] = ['acknowledged', 'running', 'waiting', 'completed', 'failed', 'stopped']
 export type TaskControlAction = 'stop' | 'continue' | 'summarize'
 export const TASK_CONTROL_ACTIONS: TaskControlAction[] = ['stop', 'continue', 'summarize']
+export type AccessMode = 'pairing' | 'allowlist' | 'disabled'
+export type TaskControlAccessPolicy = {
+  dmPolicy: AccessMode
+  allowFrom: string[]
+  groups: Record<string, { allowFrom?: string[] }>
+}
 
 export type TriggerFacts = {
   isDm: boolean
@@ -153,4 +159,18 @@ export function formatTaskControlRequest(action: TaskControlAction): string {
     summarize: 'Summary requested',
   }
   return label[action]
+}
+
+export function isTaskControlAllowed(
+  access: TaskControlAccessPolicy,
+  input: { isDm: boolean; userId: string; groupKey?: string | null },
+): boolean {
+  if (access.dmPolicy === 'disabled') return false
+  if (input.isDm) return access.allowFrom.includes(input.userId)
+
+  const policy = input.groupKey ? access.groups[input.groupKey] : undefined
+  if (!policy) return false
+
+  const groupAllowFrom = policy.allowFrom ?? []
+  return groupAllowFrom.length === 0 || groupAllowFrom.includes(input.userId)
 }

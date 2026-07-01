@@ -10,6 +10,7 @@ import {
   isActiveTaskStatus,
   isTaskControlAction,
   isTaskStatus,
+  isTaskControlAllowed,
   messageMatchesMentionPattern,
   outputProfile,
   resolveTriggerReason,
@@ -132,6 +133,20 @@ describe('task controls', () => {
     expect(formatTaskControlRequest('stop')).toBe('Stop requested')
     expect(formatTaskControlRequest('continue')).toBe('Continue requested')
     expect(formatTaskControlRequest('summarize')).toBe('Summary requested')
+  })
+
+  test('blocks controls when access is globally disabled', () => {
+    expect(isTaskControlAllowed({
+      dmPolicy: 'disabled',
+      allowFrom: ['user-1'],
+      groups: {
+        'channel-1': { allowFrom: [] },
+      },
+    }, {
+      isDm: false,
+      userId: 'user-1',
+      groupKey: 'channel-1',
+    })).toBe(false)
   })
 })
 

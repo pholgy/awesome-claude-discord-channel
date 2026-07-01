@@ -71,6 +71,8 @@ assert.match(server, /task:stop/);
 assert.match(server, /task:continue/);
 assert.match(server, /task:summarize/);
 assert.match(server, /assistant_control_contract:/);
+assert.match(server, /Discord access is disabled/);
+assert.match(server, /isTaskControlAllowed\(access/);
 
 assert.doesNotMatch(
   server,
@@ -86,6 +88,7 @@ assert.match(conversation, /output_profile:/);
 assert.match(conversation, /formatTaskStatus/);
 assert.match(conversation, /isTaskStatus/);
 assert.match(conversation, /isTaskControlAction/);
+assert.match(conversation, /isTaskControlAllowed/);
 assert.match(conversation, /channel_type:/);
 assert.match(conversation, /trigger_reason: input\.triggerReason/);
 assert.match(conversation, /reply_to_message_id/);

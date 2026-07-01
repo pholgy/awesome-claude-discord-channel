@@ -39,6 +39,7 @@ import {
   formatTaskControlRequest,
   formatTaskStatus,
   isActiveTaskStatus,
+  isTaskControlAllowed,
   isTaskControlAction,
   isTaskStatus,
   messageMatchesMentionPattern,
@@ -453,6 +454,9 @@ async function fetchTextChannel(id: string) {
 async function fetchAllowedChannel(id: string) {
   const ch = await fetchTextChannel(id)
   const access = loadAccess()
+  if (access.dmPolicy === 'disabled') {
+    throw new Error('Discord access is disabled')
+  }
   if (ch.type === ChannelType.DM) {
     const userId = ch.recipientId ?? dmChannelUsers.get(id)
     if (userId && access.allowFrom.includes(userId)) return ch
@@ -860,13 +864,12 @@ async function taskControlAuthorized(interaction: ButtonInteraction): Promise<bo
   const access = loadAccess()
   const ch = interaction.channel ?? await client.channels.fetch(interaction.channelId)
   if (!ch || !ch.isTextBased()) return false
-  if (ch.type === ChannelType.DM) return access.allowFrom.includes(interaction.user.id)
-
   const key = ch.isThread() ? ch.parentId ?? ch.id : ch.id
-  const policy = access.groups[key]
-  if (!policy) return false
-  const groupAllowFrom = policy.allowFrom ?? []
-  return groupAllowFrom.length === 0 || groupAllowFrom.includes(interaction.user.id)
+  return isTaskControlAllowed(access, {
+    isDm: ch.type === ChannelType.DM,
+    userId: interaction.user.id,
+    groupKey: key,
+  })
 }
 
 async function notifyTaskControl(interaction: ButtonInteraction, action: TaskControlAction): Promise<void> {
