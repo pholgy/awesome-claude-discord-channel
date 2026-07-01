@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 const server = read('server.ts');
+const conversation = read('src/conversation.ts');
 const packageJson = JSON.parse(read('package.json'));
 const pluginJson = JSON.parse(read('.claude-plugin/plugin.json'));
 const readme = read('README.md');
@@ -13,7 +14,7 @@ const workflow = read('.github/workflows/verify.yml');
 assert.equal(packageJson.name, 'awesome-claude-discord-channel');
 assert.equal(pluginJson.name, 'awesome-discord-channel');
 assert.equal(packageJson.license, 'Apache-2.0');
-assert.equal(packageJson.scripts.verify, 'bun scripts/verify.mjs');
+assert.equal(packageJson.scripts.verify, 'bun test && bun scripts/verify.mjs');
 assert.equal(packageJson.scripts.test, 'bun run verify');
 assert.match(workflow, /bun run verify/);
 assert.doesNotMatch(workflow, /npm test|actions\/setup-node/);
@@ -54,12 +55,12 @@ assert.doesNotMatch(
   'Do not inject visible delivery_contract tags into user content.',
 );
 
-assert.match(server, /conversation_scope:/);
-assert.match(server, /conversation_scope_id:/);
-assert.match(server, /channel_type:/);
-assert.match(server, /trigger_reason: triggerReason/);
-assert.match(server, /reply_to_message_id/);
-assert.match(server, /thread_id/);
+assert.match(conversation, /conversation_scope:/);
+assert.match(conversation, /conversation_scope_id:/);
+assert.match(conversation, /channel_type:/);
+assert.match(conversation, /trigger_reason: input\.triggerReason/);
+assert.match(conversation, /reply_to_message_id/);
+assert.match(conversation, /thread_id/);
 
 assert.match(readme, /actively maintained, opinionated Discord channel plugin/);
 assert.match(readme, /Project direction/);

@@ -33,6 +33,12 @@ import { randomBytes } from 'crypto'
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync, statSync, renameSync, realpathSync, chmodSync } from 'fs'
 import { homedir } from 'os'
 import { join, sep } from 'path'
+import {
+  buildConversationMeta,
+  messageMatchesMentionPattern,
+  resolveTriggerReason,
+  type TriggerReason,
+} from './src/conversation.ts'
 
 const STATE_DIR = process.env.DISCORD_STATE_DIR ?? join(homedir(), '.claude', 'channels', 'discord')
 const ACCESS_FILE = join(STATE_DIR, 'access.json')
@@ -212,15 +218,6 @@ function pruneExpired(a: Access): boolean {
   return changed
 }
 
-type TriggerReason =
-  | 'dm'
-  | 'direct_mention'
-  | 'reply_to_bot'
-  | 'mention_pattern'
-  | 'watch_mode'
-
-type ConversationScope = 'dm' | 'guild_channel' | 'thread'
-
 type GateResult =
   | { action: 'deliver'; access: Access; triggerReason: TriggerReason }
   | { action: 'drop' }
@@ -298,83 +295,56 @@ async function gate(msg: Message): Promise<GateResult> {
   if (groupAllowFrom.length > 0 && !groupAllowFrom.includes(senderId)) {
     return { action: 'drop' }
   }
-  let triggerReason: TriggerReason = 'watch_mode'
+  let triggerReason: TriggerReason | null = resolveTriggerReason({
+    isDm: false,
+    requireMention,
+    mentionedBot: false,
+    repliedToBot: false,
+    mentionPatternMatched: false,
+  })
   if (requireMention) {
-    const reason = await mentionTriggerReason(msg, access.mentionPatterns)
-    if (!reason) return { action: 'drop' }
-    triggerReason = reason
+    triggerReason = await mentionTriggerReason(msg, access.mentionPatterns)
   }
+  if (!triggerReason) return { action: 'drop' }
   return { action: 'deliver', access, triggerReason }
 }
 
 async function mentionTriggerReason(msg: Message, extraPatterns?: string[]): Promise<TriggerReason | null> {
-  if (client.user && msg.mentions.has(client.user)) return 'direct_mention'
+  const mentionedBot = client.user ? msg.mentions.has(client.user) : false
+  if (mentionedBot) {
+    return resolveTriggerReason({
+      isDm: false,
+      requireMention: true,
+      mentionedBot,
+      repliedToBot: false,
+      mentionPatternMatched: false,
+    })
+  }
 
   // Reply to one of our messages counts as an implicit mention.
   const refId = msg.reference?.messageId
+  let repliedToBot = false
   if (refId) {
-    if (recentSentIds.has(refId)) return 'reply_to_bot'
+    if (recentSentIds.has(refId)) {
+      repliedToBot = true
+    }
     // Fallback: fetch the referenced message and check authorship.
     // Can fail if the message was deleted or we lack history perms.
-    try {
-      const ref = await msg.fetchReference()
-      if (ref.author.id === client.user?.id) return 'reply_to_bot'
-    } catch {}
+    if (!repliedToBot) {
+      try {
+        const ref = await msg.fetchReference()
+        if (ref.author.id === client.user?.id) repliedToBot = true
+      } catch {}
+    }
   }
 
-  const text = msg.content
-  for (const pat of extraPatterns ?? []) {
-    try {
-      if (new RegExp(pat, 'i').test(text)) return 'mention_pattern'
-    } catch {}
-  }
-  return null
-}
-
-function conversationScope(msg: Message): ConversationScope {
-  if (msg.channel.type === ChannelType.DM) return 'dm'
-  return msg.channel.isThread() ? 'thread' : 'guild_channel'
-}
-
-function channelTypeName(type: ChannelType): string {
-  switch (type) {
-    case ChannelType.DM:
-      return 'dm'
-    case ChannelType.GuildText:
-      return 'guild_text'
-    case ChannelType.GuildAnnouncement:
-      return 'guild_announcement'
-    case ChannelType.PublicThread:
-      return 'public_thread'
-    case ChannelType.PrivateThread:
-      return 'private_thread'
-    case ChannelType.AnnouncementThread:
-      return 'announcement_thread'
-    default:
-      return `discord_channel_type_${type}`
-  }
-}
-
-function buildConversationMeta(msg: Message, triggerReason: TriggerReason): Record<string, string> {
-  const scope = conversationScope(msg)
-  const meta: Record<string, string> = {
-    conversation_scope: scope,
-    conversation_scope_id: msg.channelId,
-    channel_id: msg.channelId,
-    channel_type: channelTypeName(msg.channel.type),
-    trigger_reason: triggerReason,
-    display_name: msg.member?.displayName ?? msg.author.globalName ?? msg.author.username,
-  }
-
-  if (msg.guildId) meta.guild_id = msg.guildId
-  if (msg.channel.isThread()) {
-    meta.thread_id = msg.channelId
-    if (msg.channel.parentId) meta.parent_channel_id = msg.channel.parentId
-  }
-  if (msg.reference?.messageId) meta.reply_to_message_id = msg.reference.messageId
-  if (msg.reference?.channelId) meta.reply_to_channel_id = msg.reference.channelId
-
-  return meta
+  return resolveTriggerReason({
+    isDm: false,
+    requireMention: true,
+    mentionedBot: false,
+    repliedToBot,
+    mentionPatternMatched: messageMatchesMentionPattern(msg.content, extraPatterns),
+  })
 }
 
 // The /discord:access skill drops a file at approved/<senderId> when it pairs
@@ -931,7 +901,18 @@ async function handleInbound(msg: Message): Promise<void> {
   // Attachment listing goes in meta only — an in-content annotation is
   // forgeable by any allowlisted sender typing that string.
   const content = msg.content || (atts.length > 0 ? '(attachment)' : '')
-  const conversationMeta = buildConversationMeta(msg, result.triggerReason)
+  const conversationMeta = buildConversationMeta({
+    channelId: msg.channelId,
+    channelType: msg.channel.type,
+    isDm: msg.channel.type === ChannelType.DM,
+    isThread: msg.channel.isThread(),
+    triggerReason: result.triggerReason,
+    displayName: msg.member?.displayName ?? msg.author.globalName ?? msg.author.username,
+    guildId: msg.guildId,
+    parentChannelId: msg.channel.isThread() ? msg.channel.parentId : undefined,
+    replyToMessageId: msg.reference?.messageId,
+    replyToChannelId: msg.reference?.channelId,
+  })
 
   mcp.notification({
     method: 'notifications/claude/channel',

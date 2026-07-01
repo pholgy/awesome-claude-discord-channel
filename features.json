@@ -24,7 +24,7 @@
     "description": "Add a simulated Discord conversation test harness.",
     "issue_refs": ["#10"],
     "verify_steps": ["bun run verify"],
-    "passes": false
+    "passes": true
   },
   {
     "id": "INT-03",
