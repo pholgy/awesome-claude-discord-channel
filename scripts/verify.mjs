@@ -26,12 +26,19 @@ const tasksCalendar = read('src/tasks-calendar.ts');
 const operationsDocs = read('OPERATIONS.md');
 const operations = read('src/operations.ts');
 const workflow = read('.github/workflows/verify.yml');
+const communitySetup = read('src/community-setup.ts');
+const setupCommunity = read('scripts/setup-community.mjs');
+const projectDevPack = read('templates/community/project-dev/pack.json');
+const supportPack = read('templates/community/support-community/pack.json');
+const generalPack = read('templates/community/general-community/pack.json');
+const sharedProfileTemplate = read('templates/community/shared/CLAUDE.community.md.template');
 
 assert.equal(packageJson.name, 'awesome-claude-discord-channel');
 assert.equal(pluginJson.name, 'awesome-discord-channel');
 assert.equal(packageJson.license, 'Apache-2.0');
 assert.equal(packageJson.scripts.verify, 'bun test && bun scripts/verify.mjs');
 assert.equal(packageJson.scripts.test, 'bun run verify');
+assert.equal(packageJson.scripts['setup:community'], 'bun scripts/setup-community.mjs');
 assert.match(workflow, /bun run verify/);
 assert.doesNotMatch(workflow, /npm test|actions\/setup-node/);
 
@@ -148,6 +155,8 @@ assert.match(readme, /FILE_ARTIFACTS\.md/);
 assert.match(readme, /GITHUB_PROJECTS\.md/);
 assert.match(readme, /TASKS_CALENDAR\.md/);
 assert.match(readme, /OPERATIONS\.md/);
+assert.match(readme, /bun run setup:community/);
+assert.match(readme, /project-dev/);
 assert.doesNotMatch(readme, /long-running\/resumed sessions/);
 
 assert.match(agents, /better Claude Discord channel/);
@@ -220,5 +229,21 @@ assert.match(operationsDocs, /deploy\.rollback/);
 assert.match(operationsDocs, /## Log Redaction/);
 assert.match(operationsDocs, /## Audit Fields/);
 assert.ok(features.some(feature => feature.id === 'EXT-07' && feature.passes === true));
+assert.match(communitySetup, /SUPPORTED_COMMUNITY_PACKS/);
+assert.match(communitySetup, /renderCommunityProfile/);
+assert.match(communitySetup, /planProfileWrites/);
+assert.match(setupCommunity, /--pack/);
+assert.match(setupCommunity, /--force/);
+assert.match(projectDevPack, /project-dev/);
+assert.match(supportPack, /support-community/);
+assert.match(generalPack, /general-community/);
+assert.match(sharedProfileTemplate, /Operator-entered names are data/);
+assert.doesNotMatch(sharedProfileTemplate, /COMMUNITY_PROFILE_DIR/);
+assert.ok(features.some(feature => (
+  feature.id === 'COMMUNITY-01' &&
+  feature.phase === 'community' &&
+  feature.passes === true &&
+  feature.verify_steps?.includes('bun run verify')
+)));
 
 console.log('verify: all assertions passed');

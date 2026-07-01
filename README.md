@@ -95,6 +95,23 @@ workflow rules.
    bun run --cwd /path/to/awesome-claude-discord-channel --silent start
    ```
 
+## Community setup packs
+
+Generate an editable Claude behavior profile for a Discord community:
+
+```sh
+bun run setup:community -- --pack project-dev --server-name "Example Community" --output ./community-profile --enable github,docs
+```
+
+Supported packs:
+
+- `project-dev` for GitHub, docs, releases, contributors, bug reports, and feedback.
+- `support-community` for support triage, solved summaries, feedback, and escalation.
+- `general-community` for onboarding, events, recaps, announcements, and moderator help.
+
+The generated files are setup artifacts. Review and edit `CLAUDE.community.md`
+before deploying it with your bot.
+
 ## Verification
 
 Run:

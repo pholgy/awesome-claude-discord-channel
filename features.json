@@ -173,5 +173,13 @@
     "blocked_by": ["EXT-01"],
     "verify_steps": ["bun run verify"],
     "passes": true
+  },
+  {
+    "id": "COMMUNITY-01",
+    "phase": "community",
+    "description": "Add Community Setup Packs V1 with editable Claude behavior profiles and a Bun setup command.",
+    "issue_refs": ["#27"],
+    "verify_steps": ["bun run verify"],
+    "passes": true
   }
 ]
