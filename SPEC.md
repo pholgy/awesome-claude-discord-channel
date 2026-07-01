@@ -82,6 +82,7 @@ changing the raw message content:
 - `context_boundary`: `private_dm`, `guild_channel`, or `guild_thread`.
 - `context_visibility`: `private` for DMs, `shared` for guild channels and
   threads.
+- `output_profile`: `private_dm`, `shared_channel`, or `shared_thread`.
 - `channel_id`: Discord channel id where the inbound message arrived.
 - `channel_type`: stable text name for the Discord channel type when known.
 - `guild_id`: guild id for guild messages.
@@ -129,6 +130,19 @@ Context contract:
 - `fetch_messages` history is request-scoped evidence, not durable memory.
   The assistant should use it for the current answer and say when the fetched
   window is incomplete.
+
+Output contract:
+
+- Private DMs can be more conversational, but still need visible replies through
+  the Discord reply tool.
+- Shared channels should use short-first answers and ask before posting large
+  detail.
+- Shared threads can carry more detail than channels, but should still avoid
+  repeated progress spam.
+- Progress updates should prefer editing an existing bot message when practical.
+  A completed long task should send a new final reply so Discord users get a
+  notification.
+- Large artifacts should be attached as files instead of pasted into chat.
 
 ## Internal Implementation Order
 

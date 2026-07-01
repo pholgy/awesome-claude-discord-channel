@@ -131,6 +131,21 @@ Configure outbound behavior with `/discord:access set <key> <value>`.
 
 **`chunkMode`** chooses the split strategy: `length` cuts exactly at the limit; `newline` prefers paragraph boundaries.
 
+## Output policy
+
+Delivered Discord messages include `output_profile` metadata:
+
+| Profile | Intended behavior |
+| --- | --- |
+| `private_dm` | More conversational replies are acceptable, while still using Discord-visible replies. |
+| `shared_channel` | Answer short first, avoid flooding, and move large detail to a thread or attachment when possible. |
+| `shared_thread` | More detail is acceptable than in a channel, but progress updates should still be restrained. |
+
+For long work, the assistant should acknowledge early, prefer editing progress
+messages instead of posting repeated updates, and send a final new reply when
+work completes so Discord users get a notification. Large generated output
+should be attached as a file instead of pasted into the channel.
+
 ## Skill reference
 
 | Command | Effect |

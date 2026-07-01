@@ -6,6 +6,7 @@ import {
   contextBoundary,
   contextVisibility,
   messageMatchesMentionPattern,
+  outputProfile,
   resolveTriggerReason,
 } from '../src/conversation.ts'
 
@@ -112,6 +113,7 @@ describe('buildConversationMeta', () => {
       conversation_scope_id: 'thread-1',
       context_boundary: 'guild_thread',
       context_visibility: 'shared',
+      output_profile: 'shared_thread',
       channel_id: 'thread-1',
       channel_type: 'public_thread',
       trigger_reason: 'reply_to_bot',
@@ -137,6 +139,7 @@ describe('buildConversationMeta', () => {
       conversation_scope_id: 'dm-1',
       context_boundary: 'private_dm',
       context_visibility: 'private',
+      output_profile: 'private_dm',
       channel_id: 'dm-1',
       channel_type: 'dm',
       trigger_reason: 'dm',
@@ -155,5 +158,8 @@ describe('buildConversationMeta', () => {
     expect(contextBoundary({ isDm: false, isThread: true })).toBe('guild_thread')
     expect(contextVisibility({ isDm: true })).toBe('private')
     expect(contextVisibility({ isDm: false })).toBe('shared')
+    expect(outputProfile({ isDm: true, isThread: false })).toBe('private_dm')
+    expect(outputProfile({ isDm: false, isThread: false })).toBe('shared_channel')
+    expect(outputProfile({ isDm: false, isThread: true })).toBe('shared_thread')
   })
 })
