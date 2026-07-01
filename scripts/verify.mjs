@@ -19,6 +19,8 @@ const knowledgeDocs = read('KNOWLEDGE_SOURCES.md');
 const knowledgeSources = read('src/knowledge-sources.ts');
 const fileArtifactDocs = read('FILE_ARTIFACTS.md');
 const fileArtifacts = read('src/file-artifacts.ts');
+const githubDocs = read('GITHUB_PROJECTS.md');
+const githubProject = read('src/github-project.ts');
 const workflow = read('.github/workflows/verify.yml');
 
 assert.equal(packageJson.name, 'awesome-claude-discord-channel');
@@ -139,6 +141,7 @@ assert.match(readme, /EXTERNAL_CONNECTORS\.md/);
 assert.match(readme, /CUSTOM_ACTIONS\.md/);
 assert.match(readme, /KNOWLEDGE_SOURCES\.md/);
 assert.match(readme, /FILE_ARTIFACTS\.md/);
+assert.match(readme, /GITHUB_PROJECTS\.md/);
 assert.doesNotMatch(readme, /long-running\/resumed sessions/);
 
 assert.match(agents, /better Claude Discord channel/);
@@ -187,5 +190,13 @@ assert.match(fileArtifactDocs, /## Limits/);
 assert.match(fileArtifactDocs, /## Sensitive Files/);
 assert.match(fileArtifactDocs, /## External Storage Links/);
 assert.ok(features.some(feature => feature.id === 'EXT-04' && feature.passes === true));
+assert.match(githubProject, /githubProjectActionPolicy/);
+assert.match(githubProject, /formatDiscordSourceLink/);
+assert.match(githubProject, /formatGitHubChecksSummary/);
+assert.match(githubDocs, /## Action Policy/);
+assert.match(githubDocs, /issue\.comment/);
+assert.match(githubDocs, /## Discord Source Links/);
+assert.match(githubDocs, /## Auth Configuration/);
+assert.ok(features.some(feature => feature.id === 'EXT-05' && feature.passes === true));
 
 console.log('verify: all assertions passed');
