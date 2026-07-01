@@ -1,28 +1,34 @@
 # Awesome Claude Discord Channel
 
-A standalone Discord channel plugin for Claude Code, extracted from the official
-Discord channel plugin and hardened for long-running/resumed sessions.
+An actively maintained, opinionated Discord channel plugin for Claude Code.
 
-The main difference from upstream is a delivery contract on inbound Discord
-messages: Claude is reminded, through assistant-only channel metadata, that
+This project exists to make Claude-in-Discord feel reliable enough for real
+daily use: visible replies, predictable access control, useful history tools,
+attachments on demand, and room to add operational features that the basic
+channel experience does not cover yet.
+
+It started from the Apache-2.0 Discord plugin in
+`anthropics/claude-plugins-official`, then turns that baseline into a public,
+patchable channel implementation for people who want to run and improve their
+own Claude Discord assistant.
+
+## Project direction
+
+The goal is not to carry a one-off bug workaround. The goal is a better Discord
+channel for Claude Code:
+
+- reliable Discord-visible replies
+- clear access-control behavior
+- good support for guild channels, DMs, attachments, and history
+- practical deployment docs for local, container, and always-on bot setups
+- small, reviewable improvements that can track upstream when it makes sense
+
+One reliability feature included here is an assistant-only delivery contract on
+inbound Discord messages. It reminds Claude, through channel metadata, that
 normal transcript text is not visible to Discord and that visible responses must
-go through `mcp__discord__reply`.
-
-## Why this exists
-
-In a long-running deployment, a Discord message can be processed by Claude Code
-and produce normal assistant text while never calling the Discord `reply` tool.
-The transcript looks answered, but the Discord user sees nothing.
-
-This fork keeps the official plugin shape, access model, and tools, then adds a
-metadata-only reminder close to each inbound Discord message:
-
-- no visible `<delivery_contract>` tag in user content
-- no change to Discord message text
-- explicit `mcp__discord__reply` requirement in channel metadata
-- explicit "ack first" guidance for tool/code/web/file/heavy work
-
-Upstream context: https://github.com/anthropics/claude-plugins-official/issues/3569
+go through `mcp__discord__reply`. This avoids injecting visible
+`<delivery_contract>` tags into user content while still keeping the delivery
+rule close to the Discord message.
 
 ## What is included
 
@@ -31,7 +37,7 @@ Upstream context: https://github.com/anthropics/claude-plugins-official/issues/3
 - Tools: `reply`, `react`, `edit_message`, `fetch_messages`, `download_attachment`
 - Attachment download on demand
 - Typing indicator while Claude is working
-- Hardened visible-reply delivery metadata
+- Metadata-only visible-reply delivery contract
 
 The MCP server key remains `discord`, so existing `/discord:*` workflows and
 tool names stay familiar.
@@ -105,9 +111,8 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md).
 This repo is derived from the Apache-2.0 licensed Discord plugin in
 `anthropics/claude-plugins-official`, under `external_plugins/discord`.
 
-The original plugin remains the best default for most users. This repo is for
-custom deployments that want a public, patchable Discord channel with stronger
-reply-delivery behavior.
+This repo keeps the upstream license and attribution, while intentionally taking
+its own product direction for a more capable Discord channel experience.
 
 ## License
 

@@ -7,6 +7,7 @@ const server = read('server.ts');
 const packageJson = JSON.parse(read('package.json'));
 const pluginJson = JSON.parse(read('.claude-plugin/plugin.json'));
 const readme = read('README.md');
+const agents = read('AGENTS.md');
 
 assert.equal(packageJson.name, 'awesome-claude-discord-channel');
 assert.equal(pluginJson.name, 'awesome-discord-channel');
@@ -36,7 +37,14 @@ assert.doesNotMatch(
   'Do not inject visible delivery_contract tags into user content.',
 );
 
-assert.match(readme, /Upstream context:/);
+assert.match(readme, /actively maintained, opinionated Discord channel plugin/);
+assert.match(readme, /Project direction/);
+assert.match(readme, /Metadata-only visible-reply delivery contract/);
 assert.match(readme, /anthropics\/claude-plugins-official/);
+assert.doesNotMatch(readme, /long-running\/resumed sessions/);
+
+assert.match(agents, /better Claude Discord channel/);
+assert.match(agents, /issue-first and PR-only/);
+assert.match(agents, /assistant_delivery_contract/);
 
 console.log('verify: all assertions passed');
