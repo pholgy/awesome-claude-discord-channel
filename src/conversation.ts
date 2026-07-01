@@ -15,8 +15,8 @@ export type ContextVisibility = 'private' | 'shared'
 export type OutputProfile = 'private_dm' | 'shared_channel' | 'shared_thread'
 export type TaskStatus = 'acknowledged' | 'running' | 'waiting' | 'completed' | 'failed' | 'stopped'
 export const TASK_STATUSES: TaskStatus[] = ['acknowledged', 'running', 'waiting', 'completed', 'failed', 'stopped']
-export type TaskControlAction = 'stop' | 'continue' | 'summarize' | 'quiet'
-export const TASK_CONTROL_ACTIONS: TaskControlAction[] = ['stop', 'continue', 'summarize', 'quiet']
+export type TaskControlAction = 'stop' | 'continue' | 'summarize' | 'quiet' | 'thread'
+export const TASK_CONTROL_ACTIONS: TaskControlAction[] = ['stop', 'continue', 'summarize', 'quiet', 'thread']
 export type AccessMode = 'pairing' | 'allowlist' | 'disabled'
 export type TaskControlAccessPolicy = {
   dmPolicy: AccessMode
@@ -158,12 +158,18 @@ export function formatTaskControlRequest(action: TaskControlAction): string {
     continue: 'Continue requested',
     summarize: 'Summary requested',
     quiet: 'Quiet mode requested',
+    thread: 'Thread requested',
   }
   return label[action]
 }
 
 export function formatInactiveTaskControl(): string {
   return 'No active task for this control.'
+}
+
+export function formatThreadName(name?: string): string {
+  const normalized = name?.replace(/\s+/g, ' ').trim() || 'Task thread'
+  return normalized.slice(0, 100)
 }
 
 export function isTaskControlAllowed(

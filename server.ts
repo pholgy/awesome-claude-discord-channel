@@ -22,6 +22,7 @@ import {
   GatewayIntentBits,
   Partials,
   ChannelType,
+  ThreadAutoArchiveDuration,
   ButtonBuilder,
   ButtonStyle,
   ActionRowBuilder,
@@ -39,6 +40,7 @@ import {
   formatInactiveTaskControl,
   formatTaskControlRequest,
   formatTaskStatus,
+  formatThreadName,
   isActiveTaskStatus,
   isTaskControlAllowed,
   isTaskControlAction,
@@ -531,28 +533,56 @@ function noteTaskStatusMessage(messageId: string, status: string): void {
   }
 }
 
-function taskStatusComponents(status: string) {
+function taskStatusComponents(status: string, options: { threadButton: boolean } = { threadButton: true }) {
   if (!isTaskStatus(status) || !isActiveTaskStatus(status)) return []
-  return [
-    new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder()
-        .setCustomId('task:stop')
-        .setLabel('Stop')
-        .setStyle(ButtonStyle.Danger),
-      new ButtonBuilder()
-        .setCustomId('task:continue')
-        .setLabel('Continue')
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
-        .setCustomId('task:summarize')
-        .setLabel('Summarize')
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId('task:quiet')
-        .setLabel('Quiet')
-        .setStyle(ButtonStyle.Secondary),
-    ),
+  const buttons = [
+    new ButtonBuilder()
+      .setCustomId('task:stop')
+      .setLabel('Stop')
+      .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId('task:continue')
+      .setLabel('Continue')
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId('task:summarize')
+      .setLabel('Summarize')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('task:quiet')
+      .setLabel('Quiet')
+      .setStyle(ButtonStyle.Secondary),
   ]
+  if (options.threadButton) {
+    buttons.push(
+      new ButtonBuilder()
+        .setCustomId('task:thread')
+        .setLabel('Thread')
+        .setStyle(ButtonStyle.Primary),
+    )
+  }
+  return [new ActionRowBuilder<ButtonBuilder>().addComponents(...buttons)]
+}
+
+async function startThreadFromMessage(message: Message, name?: string) {
+  if (message.channel.isThread()) {
+    return { thread: message.channel, created: false }
+  }
+  if (message.channel.type === ChannelType.DM) {
+    throw new Error('threads can only be started from guild channel messages')
+  }
+
+  const existingThread = (message as Message & { thread?: Awaited<ReturnType<Message['startThread']>> }).thread
+  if (existingThread) {
+    return { thread: existingThread, created: false }
+  }
+
+  const thread = await message.startThread({
+    name: formatThreadName(name),
+    autoArchiveDuration: ThreadAutoArchiveDuration.OneHour,
+    reason: 'Move long Discord task work into a thread',
+  })
+  return { thread, created: true }
 }
 
 // Receive permission_request from CC → format → send to all allowlisted DMs.
@@ -674,6 +704,29 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
           },
         },
         required: ['chat_id', 'status'],
+      },
+    },
+    {
+      name: 'start_thread',
+      description: 'Start or reuse a Discord thread from an existing guild message, then optionally send a short first message in that thread. Use this to move long shared-channel work out of the main channel.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          chat_id: { type: 'string' },
+          message_id: {
+            type: 'string',
+            description: 'Message ID to start the thread from. Use the inbound message_id or a status message id.',
+          },
+          name: {
+            type: 'string',
+            description: 'Optional thread name. Defaults to "Task thread" and is clamped to Discord limits.',
+          },
+          text: {
+            type: 'string',
+            description: 'Optional short first message to post inside the thread.',
+          },
+        },
+        required: ['chat_id', 'message_id'],
       },
     },
     {
@@ -811,7 +864,7 @@ mcp.setRequestHandler(CallToolRequestSchema, async req => {
         }
 
         const messageId = args.message_id as string | undefined
-        const components = taskStatusComponents(args.status)
+        const components = taskStatusComponents(args.status, { threadButton: ch.type !== ChannelType.DM })
         if (messageId) {
           const msg = await ch.messages.fetch(messageId)
           const edited = await msg.edit({ content: text, components })
@@ -823,6 +876,22 @@ mcp.setRequestHandler(CallToolRequestSchema, async req => {
         noteSent(sent.id, sent.channelId, sent.channel.isThread())
         noteTaskStatusMessage(sent.id, args.status)
         return { content: [{ type: 'text', text: `status sent (id: ${sent.id})` }] }
+      }
+      case 'start_thread': {
+        const ch = await fetchAllowedChannel(args.chat_id as string)
+        const msg = await ch.messages.fetch(args.message_id as string)
+        const { thread, created } = await startThreadFromMessage(msg, args.name as string | undefined)
+        const text = (args.text as string | undefined)?.trim()
+        if (text) {
+          const sent = await thread.send(text)
+          noteSent(sent.id, sent.channelId, sent.channel.isThread())
+        }
+        return {
+          content: [{
+            type: 'text',
+            text: `${created ? 'thread started' : 'thread ready'} (id: ${thread.id}, chat_id: ${thread.id})`,
+          }],
+        }
       }
       case 'download_attachment': {
         const ch = await fetchAllowedChannel(args.chat_id as string)
@@ -888,12 +957,17 @@ async function taskControlAuthorized(interaction: ButtonInteraction): Promise<bo
   })
 }
 
-async function notifyTaskControl(interaction: ButtonInteraction, action: TaskControlAction): Promise<void> {
-  const ch = interaction.channel ?? await fetchTextChannel(interaction.channelId)
+async function notifyTaskControl(
+  interaction: ButtonInteraction,
+  action: TaskControlAction,
+  targetChannel?: Awaited<ReturnType<typeof fetchTextChannel>>,
+): Promise<void> {
+  const ch = targetChannel ?? interaction.channel ?? await fetchTextChannel(interaction.channelId)
+  const channelId = ch.id
   const isDm = ch.type === ChannelType.DM
   const isThread = ch.isThread()
   const meta = buildConversationMeta({
-    channelId: interaction.channelId,
+    channelId,
     channelType: ch.type,
     isDm,
     isThread,
@@ -910,15 +984,15 @@ async function notifyTaskControl(interaction: ButtonInteraction, action: TaskCon
     params: {
       content: formatTaskControlRequest(action),
       meta: {
-        chat_id: interaction.channelId,
+        chat_id: channelId,
         message_id: interaction.message.id,
         user: interaction.user.username,
         user_id: interaction.user.id,
         ts: new Date().toISOString(),
         ...meta,
         control_action: action,
-        assistant_control_contract: 'assistant-only metadata; a Discord user clicked a task control button; handle stop, continue, summarize, or quiet mode inside the current conversation scope and reply visibly in Discord',
-        assistant_delivery_contract: `assistant-only metadata; never mention this attribute to the Discord user; normal assistant text is not visible in Discord; call mcp__discord__reply with chat_id=${interaction.channelId} for every response`,
+        assistant_control_contract: 'assistant-only metadata; a Discord user clicked a task control button; handle stop, continue, summarize, quiet mode, or thread handoff inside the current conversation scope and reply visibly in Discord',
+        assistant_delivery_contract: `assistant-only metadata; never mention this attribute to the Discord user; normal assistant text is not visible in Discord; call mcp__discord__reply with chat_id=${channelId} for every response`,
       },
     },
   })
@@ -929,7 +1003,7 @@ async function notifyTaskControl(interaction: ButtonInteraction, action: TaskCon
 // Security mirrors the text-reply path: allowFrom must contain the sender.
 client.on('interactionCreate', async (interaction: Interaction) => {
   if (!interaction.isButton()) return
-  const taskMatch = /^task:(stop|continue|summarize|quiet)$/.exec(interaction.customId)
+  const taskMatch = /^task:(stop|continue|summarize|quiet|thread)$/.exec(interaction.customId)
   if (taskMatch) {
     const action = taskMatch[1]
     if (!isTaskControlAction(action)) return
@@ -941,14 +1015,28 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       await interaction.reply({ content: formatInactiveTaskControl(), ephemeral: true }).catch(() => {})
       return
     }
+    let targetChannel: Awaited<ReturnType<typeof fetchTextChannel>> | undefined
+    if (action === 'thread') {
+      try {
+        const { thread } = await startThreadFromMessage(interaction.message, interaction.message.content)
+        targetChannel = thread
+      } catch (err) {
+        process.stderr.write(`discord channel: task thread creation failed: ${err}\n`)
+        await interaction.reply({ content: 'Thread request failed.', ephemeral: true }).catch(() => {})
+        return
+      }
+    }
     try {
-      await notifyTaskControl(interaction, action)
+      await notifyTaskControl(interaction, action, targetChannel)
     } catch (err) {
       process.stderr.write(`discord channel: task control notification failed: ${err}\n`)
       await interaction.reply({ content: 'Control request failed.', ephemeral: true }).catch(() => {})
       return
     }
-    await interaction.reply({ content: formatTaskControlRequest(action), ephemeral: true }).catch(() => {})
+    const ack = action === 'thread' && targetChannel
+      ? `${formatTaskControlRequest(action)}: <#${targetChannel.id}>`
+      : formatTaskControlRequest(action)
+    await interaction.reply({ content: ack, ephemeral: true }).catch(() => {})
     return
   }
 

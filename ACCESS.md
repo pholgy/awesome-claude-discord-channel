@@ -199,6 +199,11 @@ The channel exposes a `task_status` tool for visible task updates:
 when `message_id` is provided. Final answers should still use `reply`, because
 edited messages do not trigger Discord push notifications.
 
+For long work in a shared channel, the assistant can call `start_thread` with a
+`chat_id` and `message_id` to start or reuse a Discord thread from that message.
+The returned thread id should be used as the new `chat_id` for detailed follow-up
+work.
+
 Active task status messages include Discord buttons:
 
 | Button | Effect |
@@ -207,6 +212,7 @@ Active task status messages include Discord buttons:
 | Continue | Sends a `continue` control request into the current conversation scope. |
 | Summarize | Sends a `summarize` control request into the current conversation scope. |
 | Quiet | Sends a `quiet` control request for the active task. The assistant should stop routine progress updates and reserve visible output for blockers and the final result. |
+| Thread | Starts or reuses a thread from the task status message and sends a `thread` control request into that thread. |
 
 Button clicks use the same access boundary as inbound messages: approved DMs,
 or enabled guild channels/threads where the clicking user is allowed by that

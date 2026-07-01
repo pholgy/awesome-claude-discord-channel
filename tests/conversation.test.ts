@@ -8,6 +8,7 @@ import {
   formatTaskControlRequest,
   formatInactiveTaskControl,
   formatTaskStatus,
+  formatThreadName,
   isActiveTaskStatus,
   isTaskControlAction,
   isTaskStatus,
@@ -128,6 +129,7 @@ describe('task controls', () => {
     expect(isTaskControlAction('continue')).toBe(true)
     expect(isTaskControlAction('summarize')).toBe(true)
     expect(isTaskControlAction('quiet')).toBe(true)
+    expect(isTaskControlAction('thread')).toBe(true)
     expect(isTaskControlAction('delete')).toBe(false)
   })
 
@@ -136,6 +138,7 @@ describe('task controls', () => {
     expect(formatTaskControlRequest('continue')).toBe('Continue requested')
     expect(formatTaskControlRequest('summarize')).toBe('Summary requested')
     expect(formatTaskControlRequest('quiet')).toBe('Quiet mode requested')
+    expect(formatTaskControlRequest('thread')).toBe('Thread requested')
   })
 
   test('formats inactive control feedback', () => {
@@ -154,6 +157,17 @@ describe('task controls', () => {
       userId: 'user-1',
       groupKey: 'channel-1',
     })).toBe(false)
+  })
+})
+
+describe('formatThreadName', () => {
+  test('normalizes blank thread names', () => {
+    expect(formatThreadName('   ')).toBe('Task thread')
+  })
+
+  test('collapses whitespace and clamps Discord thread names', () => {
+    expect(formatThreadName('  investigate   staging    deploy  ')).toBe('investigate staging deploy')
+    expect(formatThreadName('x'.repeat(140))).toHaveLength(100)
   })
 })
 

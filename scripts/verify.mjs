@@ -69,15 +69,24 @@ assert.match(
   'MCP tools must expose Discord task lifecycle updates.',
 );
 
+assert.match(
+  server,
+  /name: 'start_thread'/,
+  'MCP tools must expose Discord thread handoff for long shared-channel work.',
+);
+
 assert.match(server, /task:stop/);
 assert.match(server, /task:continue/);
 assert.match(server, /task:summarize/);
 assert.match(server, /task:quiet/);
+assert.match(server, /task:thread/);
 assert.match(server, /assistant_control_contract:/);
 assert.match(server, /Discord access is disabled/);
 assert.match(server, /isTaskControlAllowed\(access/);
 assert.match(server, /activeTaskMessageIds/);
 assert.match(server, /formatInactiveTaskControl/);
+assert.match(server, /ThreadAutoArchiveDuration\.OneHour/);
+assert.match(server, /chat_id: channelId/);
 
 assert.doesNotMatch(
   server,
@@ -95,6 +104,7 @@ assert.match(conversation, /isTaskStatus/);
 assert.match(conversation, /isTaskControlAction/);
 assert.match(conversation, /isTaskControlAllowed/);
 assert.match(conversation, /formatInactiveTaskControl/);
+assert.match(conversation, /formatThreadName/);
 assert.match(conversation, /channel_type:/);
 assert.match(conversation, /trigger_reason: input\.triggerReason/);
 assert.match(conversation, /reply_to_message_id/);
@@ -112,6 +122,7 @@ assert.match(agents, /assistant_delivery_contract/);
 
 assert.ok(features.some(feature => feature.id === 'INT-08' && feature.passes === false));
 assert.ok(features.some(feature => feature.id === 'INT-09' && feature.passes === true));
+assert.ok(features.some(feature => feature.id === 'INT-10' && feature.passes === true));
 assert.ok(features.some(feature => feature.id === 'INT-12' && feature.passes === true));
 assert.ok(features.some(feature => feature.id === 'EXT-01' && feature.blocked_by?.includes('INT-12')));
 assert.match(accessDocs, /Safe context reuse examples/);

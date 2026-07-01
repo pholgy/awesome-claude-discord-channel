@@ -34,7 +34,7 @@ rule close to the Discord message.
 
 - Discord gateway bridge for Claude Code
 - Built-in access control and pairing flow
-- Tools: `reply`, `task_status`, `react`, `edit_message`, `fetch_messages`, `download_attachment`
+- Tools: `reply`, `task_status`, `start_thread`, `react`, `edit_message`, `fetch_messages`, `download_attachment`
 - Attachment download on demand
 - Typing indicator while Claude is working
 - Metadata-only visible-reply delivery contract
