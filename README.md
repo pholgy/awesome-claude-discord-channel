@@ -100,7 +100,7 @@ workflow rules.
 Generate an editable Claude behavior profile for a Discord community:
 
 ```sh
-bun run setup:community -- --pack project-dev --server-name "Example Community" --output ./community-profile --enable github,docs
+bun run setup:community -- --pack project-dev --server-name "Example Community" --output ./community-profile --enable github,docs --support-channel "#help" --announcements-channel "#announcements"
 ```
 
 Supported packs:
@@ -110,7 +110,8 @@ Supported packs:
 - `general-community` for onboarding, events, recaps, announcements, and moderator help.
 
 The generated files are setup artifacts. Review and edit `CLAUDE.community.md`
-before deploying it with your bot.
+before deploying it with your bot. If any generated target file already exists,
+rerun with `--force`; v1 does not prompt for overwrite confirmation.
 
 ## Verification
 

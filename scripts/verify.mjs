@@ -233,6 +233,7 @@ assert.match(communitySetup, /SUPPORTED_COMMUNITY_PACKS/);
 assert.match(communitySetup, /renderCommunityProfile/);
 assert.match(communitySetup, /planProfileWrites/);
 assert.match(setupCommunity, /--pack/);
+assert.match(setupCommunity, /--support-channel/);
 assert.match(setupCommunity, /--force/);
 assert.match(projectDevPack, /project-dev/);
 assert.match(supportPack, /support-community/);

@@ -220,7 +220,7 @@ The script should:
 2. collect simple answers from stdin,
 3. create the output directory,
 4. render template files,
-5. refuse to overwrite existing files unless the user confirms,
+5. refuse to overwrite existing files unless `--force` is provided,
 6. print the next steps.
 
 The renderer can be simple string interpolation. No new template dependency is
@@ -271,8 +271,8 @@ Default behavior is no overwrite:
 - If any target file already exists and `--force` is not set, write nothing and
   report the existing file paths.
 - If `--force` is set, rewrite all target files atomically where practical.
-- Interactive confirmation is equivalent to `--force` for the whole generated
-  profile, not per file.
+- Version 1 does not prompt for interactive overwrite confirmation; rerun with
+  `--force` for the whole generated profile.
 
 ## Template Layout
 

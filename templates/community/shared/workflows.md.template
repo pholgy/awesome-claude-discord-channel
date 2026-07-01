@@ -1,7 +1,7 @@
 # Community Workflows
 
-Community name: `{{serverName}}`
-Pack: `{{packLabel}}`
+Community name: {{serverName}}
+Pack: {{packLabel}}
 
 ## Summarize Thread
 

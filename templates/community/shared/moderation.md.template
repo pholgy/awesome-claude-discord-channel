@@ -1,6 +1,6 @@
 # Moderation Guidance
 
-Community name: `{{serverName}}`
+Community name: {{serverName}}
 
 Claude helps moderators and community members, but does not pretend to be an undisclosed moderator.
 

@@ -8,6 +8,12 @@ const TEMPLATE_ROOT = join(REPO_ROOT, 'templates', 'community')
 
 export type CommunityPackId = 'project-dev' | 'support-community' | 'general-community'
 export type WorkflowToggle = 'github' | 'docs' | 'files' | 'tasks' | 'operations'
+export type CommunityChannelKey =
+  | 'support'
+  | 'dev'
+  | 'announcements'
+  | 'feedback'
+  | 'moderation'
 
 export type CommunityPackInfo = {
   id: CommunityPackId
@@ -20,7 +26,7 @@ export type CommunitySetupInput = {
   serverName: string
   outputDir: string
   enabledWorkflows: WorkflowToggle[]
-  channels?: Partial<Record<'support' | 'dev' | 'announcements' | 'feedback' | 'moderation', string>>
+  channels?: Partial<Record<CommunityChannelKey, string>>
 }
 
 export type PackMetadata = {
@@ -72,6 +78,23 @@ export const TARGET_PROFILE_FILES = [
 ] as const
 
 const WORKFLOWS: WorkflowToggle[] = ['github', 'docs', 'files', 'tasks', 'operations']
+const MARKDOWN_ESCAPE_PATTERN = /([\\`*_{}[\]()#+\-.!|>])/g
+
+export const COMMUNITY_CHANNEL_KEYS: CommunityChannelKey[] = [
+  'support',
+  'dev',
+  'announcements',
+  'feedback',
+  'moderation',
+]
+
+export const DEFAULT_COMMUNITY_CHANNELS: Record<CommunityChannelKey, string> = {
+  support: '#support',
+  dev: '#dev',
+  announcements: '#announcements',
+  feedback: '#feedback',
+  moderation: '#mod-log',
+}
 
 export function parseWorkflowList(value: string | undefined): WorkflowToggle[] {
   if (!value?.trim()) return []
@@ -103,6 +126,10 @@ export function validateCommunitySetupInput(input: Partial<CommunitySetupInput>)
 }
 
 export function safeMarkdownValue(value: string): string {
+  return JSON.stringify(value).replace(MARKDOWN_ESCAPE_PATTERN, '\\$1')
+}
+
+function escapeTrustedMarkdownText(value: string): string {
   return value.replace(/[`[\]]/g, char => `\\${char}`)
 }
 
@@ -134,25 +161,38 @@ function normalizeProfilePath(path: string): string {
   return normalize(path).replace(/\\/g, '/')
 }
 
+function resolveCommunityChannels(
+  channels: CommunitySetupInput['channels'],
+): Record<CommunityChannelKey, string> {
+  return {
+    support: channels?.support ?? DEFAULT_COMMUNITY_CHANNELS.support,
+    dev: channels?.dev ?? DEFAULT_COMMUNITY_CHANNELS.dev,
+    announcements: channels?.announcements ?? DEFAULT_COMMUNITY_CHANNELS.announcements,
+    feedback: channels?.feedback ?? DEFAULT_COMMUNITY_CHANNELS.feedback,
+    moderation: channels?.moderation ?? DEFAULT_COMMUNITY_CHANNELS.moderation,
+  }
+}
+
 export function renderCommunityProfile(input: CommunitySetupInput): RenderedProfileFile[] {
   const pack = readPackMetadata(input.packId)
+  const channels = resolveCommunityChannels(input.channels)
   const serverName = safeMarkdownValue(input.serverName)
   const values = {
     serverName,
     serverNameJson: JSON.stringify(input.serverName).slice(1, -1),
     packId: pack.id,
-    packLabel: safeMarkdownValue(pack.label),
-    packPurpose: safeMarkdownValue(pack.purpose),
-    packTone: safeMarkdownValue(pack.tone),
+    packLabel: escapeTrustedMarkdownText(pack.label),
+    packPurpose: escapeTrustedMarkdownText(pack.purpose),
+    packTone: escapeTrustedMarkdownText(pack.tone),
     enabledWorkflowList: input.enabledWorkflows.length
       ? input.enabledWorkflows.map(workflow => `- ${workflowLabel(workflow)}`).join('\n')
       : '- No external workflow lanes enabled by default.',
-    primaryJobList: pack.primaryJobs.map(job => `- ${safeMarkdownValue(job)}`).join('\n'),
-    supportChannelJson: JSON.stringify(input.channels?.support ?? '#support').slice(1, -1),
-    devChannelJson: JSON.stringify(input.channels?.dev ?? '#dev').slice(1, -1),
-    announcementsChannelJson: JSON.stringify(input.channels?.announcements ?? '#announcements').slice(1, -1),
-    feedbackChannelJson: JSON.stringify(input.channels?.feedback ?? '#feedback').slice(1, -1),
-    moderationChannelJson: JSON.stringify(input.channels?.moderation ?? '#mod-log').slice(1, -1),
+    primaryJobList: pack.primaryJobs.map(job => `- ${escapeTrustedMarkdownText(job)}`).join('\n'),
+    supportChannelJson: JSON.stringify(channels.support).slice(1, -1),
+    devChannelJson: JSON.stringify(channels.dev).slice(1, -1),
+    announcementsChannelJson: JSON.stringify(channels.announcements).slice(1, -1),
+    feedbackChannelJson: JSON.stringify(channels.feedback).slice(1, -1),
+    moderationChannelJson: JSON.stringify(channels.moderation).slice(1, -1),
   }
 
   return TARGET_PROFILE_FILES.map(relativePath => ({

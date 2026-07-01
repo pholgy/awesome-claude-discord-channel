@@ -1,7 +1,7 @@
 # Community Claude Profile
 
-Community name: `{{serverName}}`
-Community pack: `{{packLabel}}`
+Community name: {{serverName}}
+Community pack: {{packLabel}}
 Purpose: {{packPurpose}}
 Tone: {{packTone}}
 

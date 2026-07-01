@@ -4,11 +4,21 @@ import { dirname, join } from 'node:path'
 import { createInterface } from 'node:readline/promises'
 import { stdin, stdout } from 'node:process'
 import {
+  COMMUNITY_CHANNEL_KEYS,
+  DEFAULT_COMMUNITY_CHANNELS,
   parseWorkflowList,
   planProfileWrites,
   renderCommunityProfile,
   validateCommunitySetupInput,
 } from '../src/community-setup.ts'
+
+const CHANNEL_FLAG_CONFIG = [
+  { key: 'support', flag: '--support-channel', help: 'Support channel name or ID.' },
+  { key: 'dev', flag: '--dev-channel', help: 'Dev/build channel name or ID.' },
+  { key: 'announcements', flag: '--announcements-channel', help: 'Announcements channel name or ID.' },
+  { key: 'feedback', flag: '--feedback-channel', help: 'Feedback channel name or ID.' },
+  { key: 'moderation', flag: '--moderation-channel', help: 'Moderation/escalation channel name or ID.' },
+]
 
 function help() {
   return `Community Setup Packs
@@ -23,7 +33,14 @@ Options:
   --server-name <name>   Discord server/community name.
   --output <dir>         Output directory. Defaults to ./community-profile.
   --enable <list>        Comma-separated workflows: github,docs,files,tasks,operations.
-  --force                Overwrite generated target files.
+  --support-channel <v>  Support channel name or ID.
+  --dev-channel <v>      Dev/build channel name or ID.
+  --announcements-channel <v>
+                         Announcements channel name or ID.
+  --feedback-channel <v> Feedback channel name or ID.
+  --moderation-channel <v>
+                         Moderation/escalation channel name or ID.
+  --force                Overwrite generated target files. V1 requires --force; no interactive overwrite confirmation is shown.
 `
 }
 
@@ -33,6 +50,7 @@ function parseArgs(argv) {
     serverName: undefined,
     outputDir: './community-profile',
     enabledWorkflows: [],
+    channels: {},
     force: false,
     help: false,
   }
@@ -45,7 +63,14 @@ function parseArgs(argv) {
     else if (arg === '--server-name') out.serverName = argv[++i]
     else if (arg === '--output') out.outputDir = argv[++i]
     else if (arg === '--enable') out.enabledWorkflows = parseWorkflowList(argv[++i])
-    else throw new Error(`unknown argument: ${arg}`)
+    else {
+      const channelFlag = CHANNEL_FLAG_CONFIG.find(config => config.flag === arg)
+      if (channelFlag) {
+        out.channels[channelFlag.key] = argv[++i]
+      } else {
+        throw new Error(`unknown argument: ${arg}`)
+      }
+    }
   }
 
   return out
@@ -60,6 +85,11 @@ function missingRequiredFlags(args) {
 
 function canPrompt() {
   return Boolean(stdin.isTTY && stdout.isTTY)
+}
+
+async function promptWithDefault(rl, prompt, defaultValue) {
+  const answer = await rl.question(`${prompt} [${defaultValue}]: `)
+  return answer.trim() ? answer : defaultValue
 }
 
 async function promptForMissingArgs(args) {
@@ -77,6 +107,18 @@ async function promptForMissingArgs(args) {
     if (prompted.enabledWorkflows.length === 0) {
       const workflows = await rl.question('Enabled workflows (comma-separated, optional): ')
       prompted.enabledWorkflows = parseWorkflowList(workflows)
+    }
+    for (const channelKey of COMMUNITY_CHANNEL_KEYS) {
+      if (prompted.channels[channelKey]) {
+        continue
+      }
+
+      const channelConfig = CHANNEL_FLAG_CONFIG.find(config => config.key === channelKey)
+      prompted.channels[channelKey] = await promptWithDefault(
+        rl,
+        channelConfig.help.replace(/ name or ID\.$/, ''),
+        DEFAULT_COMMUNITY_CHANNELS[channelKey],
+      )
     }
     return prompted
   } finally {
@@ -116,6 +158,7 @@ try {
     serverName: args.serverName,
     outputDir: args.outputDir,
     enabledWorkflows: args.enabledWorkflows,
+    channels: args.channels,
   }
   const errors = validateCommunitySetupInput(input)
   if (errors.length > 0) {

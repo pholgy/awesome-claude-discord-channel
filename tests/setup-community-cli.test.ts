@@ -59,6 +59,8 @@ describe('setup-community CLI', () => {
     expect(result.exitCode).toBe(0)
     expect(result.stdout.toString()).toContain('bun run setup:community')
     expect(result.stdout.toString()).toContain('--pack project-dev')
+    expect(result.stdout.toString()).toContain('--support-channel <v>')
+    expect(result.stdout.toString()).toContain('V1 requires --force')
   })
 
   test('generates a profile non-interactively', () => {
@@ -71,7 +73,7 @@ describe('setup-community CLI', () => {
     ])
 
     expect(result.exitCode).toBe(0)
-    expect(readFileSync(join(output, 'CLAUDE.community.md'), 'utf8')).toContain('Community name: `Axtra Dev`')
+    expect(readFileSync(join(output, 'CLAUDE.community.md'), 'utf8')).toContain('Community name: "Axtra Dev"')
     expect(readFileSync(join(output, '.env.example'), 'utf8')).toContain('CLAUDE_AUTO_UPDATE=false')
     rmSync(output, { recursive: true, force: true })
   })
@@ -127,7 +129,37 @@ describe('setup-community CLI', () => {
     ])
 
     expect(result.exitCode).toBe(0)
-    expect(readFileSync(profile, 'utf8')).toContain('Community name: `Creators`')
+    expect(readFileSync(profile, 'utf8')).toContain('Community name: "Creators"')
+    rmSync(output, { recursive: true, force: true })
+  })
+
+  test('writes non-interactive channel flags into channels.example.json with safe JSON escaping', () => {
+    const output = tempProfileDir('channels')
+    const result = runSetup([
+      '--pack', 'support-community',
+      '--server-name', 'Support Hub',
+      '--output', output,
+      '--support-channel', '#support "tier-1"',
+      '--dev-channel', 'dev\\core',
+      '--announcements-channel', '<#123456789012345678>',
+      '--feedback-channel', 'feedback (beta)',
+      '--moderation-channel', '987654321098765432',
+    ])
+
+    expect(result.exitCode).toBe(0)
+
+    const channelsFile = readFileSync(join(output, 'channels.example.json'), 'utf8')
+    const channelsJson = JSON.parse(channelsFile)
+
+    expect(channelsJson.channels).toEqual({
+      support: '#support "tier-1"',
+      dev: 'dev\\core',
+      announcements: '<#123456789012345678>',
+      feedback: 'feedback (beta)',
+      moderation: '987654321098765432',
+    })
+    expect(channelsFile).toContain('\\"tier-1\\"')
+    expect(channelsFile).toContain('dev\\\\core')
     rmSync(output, { recursive: true, force: true })
   })
 
