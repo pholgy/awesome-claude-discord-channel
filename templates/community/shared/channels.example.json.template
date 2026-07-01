@@ -1,0 +1,11 @@
+{
+  "server_name": "{{serverNameJson}}",
+  "pack": "{{packId}}",
+  "channels": {
+    "support": "{{supportChannelJson}}",
+    "dev": "{{devChannelJson}}",
+    "announcements": "{{announcementsChannelJson}}",
+    "feedback": "{{feedbackChannelJson}}",
+    "moderation": "{{moderationChannelJson}}"
+  }
+}
