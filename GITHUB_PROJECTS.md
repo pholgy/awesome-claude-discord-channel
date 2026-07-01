@@ -4,7 +4,7 @@ Discord often becomes the room where issues, PRs, checks, releases, and follow-u
 work are discussed. This lane lets Claude move project context between Discord
 and GitHub without making hidden changes.
 
-Parent issue: #11  
+Parent issue: #11
 Child issue: #14
 
 ## Action Policy

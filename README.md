@@ -57,6 +57,8 @@ See [GITHUB_PROJECTS.md](./GITHUB_PROJECTS.md) for GitHub issue, PR, and check
 workflow rules.
 See [TASKS_CALENDAR.md](./TASKS_CALENDAR.md) for reminder, task, and calendar
 workflow rules.
+See [OPERATIONS.md](./OPERATIONS.md) for operations, deploy, and status
+workflow rules.
 
 1. Create a Discord application and bot in the
    [Discord Developer Portal](https://discord.com/developers/applications).

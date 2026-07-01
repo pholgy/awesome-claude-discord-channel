@@ -23,6 +23,8 @@ const githubDocs = read('GITHUB_PROJECTS.md');
 const githubProject = read('src/github-project.ts');
 const tasksCalendarDocs = read('TASKS_CALENDAR.md');
 const tasksCalendar = read('src/tasks-calendar.ts');
+const operationsDocs = read('OPERATIONS.md');
+const operations = read('src/operations.ts');
 const workflow = read('.github/workflows/verify.yml');
 
 assert.equal(packageJson.name, 'awesome-claude-discord-channel');
@@ -145,6 +147,7 @@ assert.match(readme, /KNOWLEDGE_SOURCES\.md/);
 assert.match(readme, /FILE_ARTIFACTS\.md/);
 assert.match(readme, /GITHUB_PROJECTS\.md/);
 assert.match(readme, /TASKS_CALENDAR\.md/);
+assert.match(readme, /OPERATIONS\.md/);
 assert.doesNotMatch(readme, /long-running\/resumed sessions/);
 
 assert.match(agents, /better Claude Discord channel/);
@@ -209,5 +212,13 @@ assert.match(tasksCalendarDocs, /## Creation Rules/);
 assert.match(tasksCalendarDocs, /## Visibility/);
 assert.match(tasksCalendarDocs, /Reminder due:/);
 assert.ok(features.some(feature => feature.id === 'EXT-06' && feature.passes === true));
+assert.match(operations, /operationsActionPolicy/);
+assert.match(operations, /redactOperationsLogLine/);
+assert.match(operations, /buildOperationsAuditFields/);
+assert.match(operationsDocs, /## Action Policy/);
+assert.match(operationsDocs, /deploy\.rollback/);
+assert.match(operationsDocs, /## Log Redaction/);
+assert.match(operationsDocs, /## Audit Fields/);
+assert.ok(features.some(feature => feature.id === 'EXT-07' && feature.passes === true));
 
 console.log('verify: all assertions passed');

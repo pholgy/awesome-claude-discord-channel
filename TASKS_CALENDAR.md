@@ -4,7 +4,7 @@ Discord conversations often end with follow-up work: remind me tomorrow, make a
 task, schedule this, or ask the group later. This lane defines those workflows
 without assuming a specific task or calendar provider.
 
-Parent issue: #11  
+Parent issue: #11
 Child issue: #15
 
 ## Terms
