@@ -3,7 +3,7 @@
 Custom actions let a server owner wire a named Discord workflow to their own
 webhook or script without adding a first-party connector for every service.
 
-Parent issue: #11  
+Parent issue: #11
 Child issue: #18
 
 Custom actions are not an escape hatch around the external connector safety
