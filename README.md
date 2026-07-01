@@ -90,6 +90,16 @@ The verifier checks that:
 - visible `<delivery_contract>` tags are not injected into user content
 - plugin metadata and package metadata match this standalone repo
 
+## Contributing
+
+Contributions are issue-first and PR-only:
+
+1. Open an issue for the bug or feature.
+2. Open a PR that links the issue with `Closes #123`, `Fixes #123`, or `Refs #123`.
+3. Wait for review; direct pushes to `main` are blocked.
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md).
+
 ## Provenance
 
 This repo is derived from the Apache-2.0 licensed Discord plugin in
