@@ -1,0 +1,132 @@
+[
+  {
+    "id": "PLAN-01",
+    "phase": "planning",
+    "description": "Record the internal-first and external-second implementation order in repo-local planning artifacts.",
+    "issue_refs": ["#3", "#11"],
+    "verify_steps": ["SPEC.md exists", "features.json is valid JSON", "bun run verify"],
+    "passes": true
+  },
+  {
+    "id": "INT-01",
+    "phase": "internal",
+    "description": "Add metadata-only inbound conversation context and assistant goal hooks.",
+    "issue_refs": ["#5"],
+    "verify_steps": [
+      "bun run verify",
+      "bun build server.ts --target=bun --outfile $env:TEMP\\awesome-discord-server-check.js"
+    ],
+    "passes": false
+  },
+  {
+    "id": "INT-02",
+    "phase": "internal",
+    "description": "Add a simulated Discord conversation test harness.",
+    "issue_refs": ["#10"],
+    "verify_steps": ["bun run verify"],
+    "passes": false
+  },
+  {
+    "id": "INT-03",
+    "phase": "internal",
+    "description": "Implement explicit trigger and participation reasons.",
+    "issue_refs": ["#4"],
+    "verify_steps": ["bun run verify"],
+    "passes": false
+  },
+  {
+    "id": "INT-04",
+    "phase": "internal",
+    "description": "Define and enforce DM, channel, thread, and task context isolation boundaries.",
+    "issue_refs": ["#6"],
+    "verify_steps": ["bun run verify"],
+    "passes": false
+  },
+  {
+    "id": "INT-05",
+    "phase": "internal",
+    "description": "Define shared-channel output and noise-control policy.",
+    "issue_refs": ["#9"],
+    "verify_steps": ["bun run verify"],
+    "passes": false
+  },
+  {
+    "id": "INT-06",
+    "phase": "internal",
+    "description": "Add Discord-native long-task lifecycle behavior.",
+    "issue_refs": ["#7"],
+    "verify_steps": ["bun run verify"],
+    "passes": false
+  },
+  {
+    "id": "INT-07",
+    "phase": "internal",
+    "description": "Add Discord user controls for active conversations.",
+    "issue_refs": ["#8"],
+    "verify_steps": ["bun run verify"],
+    "passes": false
+  },
+  {
+    "id": "EXT-01",
+    "phase": "external",
+    "description": "Define external connector safety and approval model after internal behavior lands.",
+    "issue_refs": ["#12"],
+    "blocked_by": ["INT-01", "INT-02", "INT-03", "INT-04", "INT-05", "INT-06", "INT-07"],
+    "verify_steps": ["bun run verify"],
+    "passes": false
+  },
+  {
+    "id": "EXT-02",
+    "phase": "external",
+    "description": "Define a generic webhook/custom action connector model.",
+    "issue_refs": ["#18"],
+    "blocked_by": ["EXT-01"],
+    "verify_steps": ["bun run verify"],
+    "passes": false
+  },
+  {
+    "id": "EXT-03",
+    "phase": "external",
+    "description": "Define knowledge and source connector usecases.",
+    "issue_refs": ["#13"],
+    "blocked_by": ["EXT-01"],
+    "verify_steps": ["bun run verify"],
+    "passes": false
+  },
+  {
+    "id": "EXT-04",
+    "phase": "external",
+    "description": "Define files, media, and artifact workflow usecases.",
+    "issue_refs": ["#17"],
+    "blocked_by": ["EXT-01"],
+    "verify_steps": ["bun run verify"],
+    "passes": false
+  },
+  {
+    "id": "EXT-05",
+    "phase": "external",
+    "description": "Define GitHub and project workflow usecases.",
+    "issue_refs": ["#14"],
+    "blocked_by": ["EXT-01"],
+    "verify_steps": ["bun run verify"],
+    "passes": false
+  },
+  {
+    "id": "EXT-06",
+    "phase": "external",
+    "description": "Define tasks, calendar, and reminders usecases.",
+    "issue_refs": ["#15"],
+    "blocked_by": ["EXT-01"],
+    "verify_steps": ["bun run verify"],
+    "passes": false
+  },
+  {
+    "id": "EXT-07",
+    "phase": "external",
+    "description": "Define operations, deploy, and status usecases.",
+    "issue_refs": ["#16"],
+    "blocked_by": ["EXT-01"],
+    "verify_steps": ["bun run verify"],
+    "passes": false
+  }
+]

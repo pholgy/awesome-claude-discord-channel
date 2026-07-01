@@ -86,7 +86,7 @@ See [ACCESS.md](./ACCESS.md) for the full access-control model.
 Run:
 
 ```sh
-npm test
+bun run verify
 ```
 
 The verifier checks that:

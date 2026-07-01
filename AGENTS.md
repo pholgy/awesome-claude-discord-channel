@@ -32,7 +32,7 @@ Run these before claiming a change is ready:
 
 ```sh
 bun install --frozen-lockfile
-npm test
+bun run verify
 bun build server.ts --target=bun --outfile /tmp/awesome-discord-server-check.js
 ```
 
