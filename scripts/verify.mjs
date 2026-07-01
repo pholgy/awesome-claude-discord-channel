@@ -23,42 +23,48 @@ assert.doesNotMatch(workflow, /npm test|actions\/setup-node/);
 
 assert.match(
   server,
-  /const content = msg\.content \|\| \(atts\.length > 0 \? '\(attachment\)' : ''\)/,
-  'Discord user content must remain the raw message content.',
+  /buildInboundDiscordNotification\(/,
+  'Inbound Discord delivery must use the tested notification harness.',
 );
 
 assert.match(
-  server,
+  conversation,
+  /const content = input\.content \|\| \(attachments\.length > 0 \? '\(attachment\)' : ''\)/,
+  'Discord user content must remain raw unless an empty attachment-only message needs a placeholder.',
+);
+
+assert.match(
+  conversation,
   /assistant_delivery_contract:/,
   'Inbound Discord messages must carry assistant-only delivery metadata.',
 );
 
 assert.match(
-  server,
+  conversation,
   /assistant_goal_hook:/,
   'Inbound Discord messages must carry assistant-only goal metadata.',
 );
 
 assert.match(
-  server,
+  conversation,
   /assistant_conversation_contract:/,
   'Inbound Discord messages must carry assistant-only conversation metadata.',
 );
 
 assert.match(
-  server,
+  conversation,
   /assistant_context_contract:/,
   'Inbound Discord messages must carry assistant-only context boundary metadata.',
 );
 
 assert.match(
-  server,
+  conversation,
   /assistant_output_contract:/,
   'Inbound Discord messages must carry assistant-only output policy metadata.',
 );
 
 assert.match(
-  server,
+  conversation,
   /mcp__discord__reply/,
   'Delivery metadata must explicitly require mcp__discord__reply.',
 );
@@ -113,6 +119,9 @@ assert.match(conversation, /channel_type:/);
 assert.match(conversation, /trigger_reason: input\.triggerReason/);
 assert.match(conversation, /reply_to_message_id/);
 assert.match(conversation, /thread_id/);
+assert.match(conversation, /buildInboundDiscordNotification/);
+assert.match(conversation, /chunkDiscordText/);
+assert.match(conversation, /formatAttachmentSummary/);
 
 assert.match(readme, /actively maintained, opinionated Discord channel plugin/);
 assert.match(readme, /Project direction/);
@@ -124,12 +133,13 @@ assert.match(agents, /better Claude Discord channel/);
 assert.match(agents, /issue-first and PR-only/);
 assert.match(agents, /assistant_delivery_contract/);
 
-assert.ok(features.some(feature => feature.id === 'INT-08' && feature.passes === false));
+assert.ok(features.some(feature => feature.id === 'INT-08' && feature.passes === true));
 assert.ok(features.some(feature => feature.id === 'INT-09' && feature.passes === true));
 assert.ok(features.some(feature => feature.id === 'INT-10' && feature.passes === true));
 assert.ok(features.some(feature => feature.id === 'INT-11' && feature.passes === true));
 assert.ok(features.some(feature => feature.id === 'INT-12' && feature.passes === true));
 assert.ok(features.some(feature => feature.id === 'EXT-01' && feature.blocked_by?.includes('INT-12')));
+assert.ok(features.filter(feature => feature.phase === 'internal').every(feature => feature.passes === true));
 assert.match(accessDocs, /Safe context reuse examples/);
 assert.match(accessDocs, /Unsafe context reuse examples/);
 assert.match(accessDocs, /Shared-channel output examples/);

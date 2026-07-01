@@ -179,13 +179,10 @@ Foundation status:
 
 - The current internal foundation covers metadata, trigger reasons, context and
   output contracts, the `task_status` lifecycle tool, and first task controls
-  for stop, continue, and summarize.
-- It does not finish every child issue acceptance item. The remaining internal
-  work is tracked separately before external connectors start:
-  - server-level simulated harness coverage for full inbound/outbound flows,
-    attachment metadata, chunking, and MCP notifications.
-  - concrete docs examples for trigger decisions, context reuse, and shared
-    channel output.
+  for stop, continue, summarize, quiet, thread, save, and forget.
+- The internal slices in `features.json` are complete. External connector work
+  can start after this internal foundation is accepted or explicitly carried
+  forward as the base branch for follow-up PRs.
 
 ## Internal Implementation Order
 

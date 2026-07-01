@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test'
 import { ChannelType } from 'discord.js'
 import {
   buildConversationMeta,
+  buildInboundDiscordNotification,
   channelTypeName,
+  chunkDiscordText,
   contextBoundary,
   contextVisibility,
   formatTaskControlRequest,
@@ -185,6 +187,16 @@ describe('messageMatchesMentionPattern', () => {
   })
 })
 
+describe('chunkDiscordText', () => {
+  test('splits long Discord output under the configured limit', () => {
+    expect(chunkDiscordText('abcdef', 3, 'length')).toEqual(['abc', 'def'])
+  })
+
+  test('prefers newline boundaries when configured', () => {
+    expect(chunkDiscordText('alpha beta\n\ngamma', 12, 'newline')).toEqual(['alpha beta', 'gamma'])
+  })
+})
+
 describe('buildConversationMeta', () => {
   test('builds isolated thread metadata', () => {
     expect(buildConversationMeta({
@@ -251,5 +263,62 @@ describe('buildConversationMeta', () => {
     expect(outputProfile({ isDm: true, isThread: false })).toBe('private_dm')
     expect(outputProfile({ isDm: false, isThread: false })).toBe('shared_channel')
     expect(outputProfile({ isDm: false, isThread: true })).toBe('shared_thread')
+  })
+})
+
+describe('buildInboundDiscordNotification', () => {
+  test('keeps Discord content raw and places attachment details in metadata', () => {
+    const notification = buildInboundDiscordNotification({
+      chatId: 'channel-1',
+      messageId: 'message-1',
+      user: 'pat',
+      userId: 'user-1',
+      ts: '2026-07-01T00:00:00.000Z',
+      content: 'please inspect [not metadata]',
+      channelId: 'channel-1',
+      channelType: ChannelType.GuildText,
+      isDm: false,
+      isThread: false,
+      triggerReason: 'direct_mention',
+      displayName: 'Pat',
+      guildId: 'guild-1',
+      attachments: [{
+        id: 'att-1',
+        name: 'bad[name]\nfile.png',
+        contentType: 'image/png',
+        size: 2048,
+      }],
+    })
+
+    expect(notification.content).toBe('please inspect [not metadata]')
+    expect(notification.meta.attachment_count).toBe('1')
+    expect(notification.meta.attachments).toBe('bad_name__file.png (image/png, 2KB)')
+    expect(notification.meta.assistant_delivery_contract).toContain('mcp__discord__reply')
+  })
+
+  test('uses an attachment placeholder only when message content is empty', () => {
+    const notification = buildInboundDiscordNotification({
+      chatId: 'dm-1',
+      messageId: 'message-2',
+      user: 'sam',
+      userId: 'user-2',
+      ts: '2026-07-01T00:00:00.000Z',
+      content: '',
+      channelId: 'dm-1',
+      channelType: ChannelType.DM,
+      isDm: true,
+      isThread: false,
+      triggerReason: 'dm',
+      displayName: 'Sam',
+      attachments: [{
+        id: 'att-2',
+        name: 'photo.png',
+        contentType: 'image/png',
+        size: 1024,
+      }],
+    })
+
+    expect(notification.content).toBe('(attachment)')
+    expect(notification.meta.context_boundary).toBe('private_dm')
   })
 })
