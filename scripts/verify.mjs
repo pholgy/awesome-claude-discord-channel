@@ -32,6 +32,18 @@ assert.match(
 
 assert.match(
   server,
+  /assistant_goal_hook:/,
+  'Inbound Discord messages must carry assistant-only goal metadata.',
+);
+
+assert.match(
+  server,
+  /assistant_conversation_contract:/,
+  'Inbound Discord messages must carry assistant-only conversation metadata.',
+);
+
+assert.match(
+  server,
   /mcp__discord__reply/,
   'Delivery metadata must explicitly require mcp__discord__reply.',
 );
@@ -41,6 +53,13 @@ assert.doesNotMatch(
   /<delivery_contract>/,
   'Do not inject visible delivery_contract tags into user content.',
 );
+
+assert.match(server, /conversation_scope:/);
+assert.match(server, /conversation_scope_id:/);
+assert.match(server, /channel_type:/);
+assert.match(server, /trigger_reason: triggerReason/);
+assert.match(server, /reply_to_message_id/);
+assert.match(server, /thread_id/);
 
 assert.match(readme, /actively maintained, opinionated Discord channel plugin/);
 assert.match(readme, /Project direction/);

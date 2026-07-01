@@ -72,6 +72,29 @@ Evidence:
 The channel may add assistant-only metadata to inbound Discord notifications.
 These fields must never be inserted into the Discord user content.
 
+## Inbound Metadata Schema
+
+`INT-01` adds metadata fields that describe the Discord conversation without
+changing the raw message content:
+
+- `conversation_scope`: `dm`, `guild_channel`, or `thread`.
+- `conversation_scope_id`: Discord channel/thread id for the current scope.
+- `channel_id`: Discord channel id where the inbound message arrived.
+- `channel_type`: stable text name for the Discord channel type when known.
+- `guild_id`: guild id for guild messages.
+- `thread_id`: thread id when the message is inside a thread.
+- `parent_channel_id`: parent channel id for thread messages.
+- `reply_to_message_id`: referenced message id when the Discord message is a
+  reply.
+- `reply_to_channel_id`: referenced channel id when Discord provides it.
+- `trigger_reason`: `dm`, `direct_mention`, `reply_to_bot`,
+  `mention_pattern`, or `watch_mode`.
+- `display_name`: server display name when available, otherwise the Discord
+  global name or username.
+
+Existing fields remain: `chat_id`, `message_id`, `user`, `user_id`, `ts`,
+`attachment_count`, `attachments`, and `assistant_delivery_contract`.
+
 Goal hook:
 
 - `assistant_goal_hook` should state the current Discord behavior goal in one

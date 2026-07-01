@@ -16,7 +16,7 @@
       "bun run verify",
       "bun build server.ts --target=bun --outfile $env:TEMP\\awesome-discord-server-check.js"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "INT-02",
