@@ -12,6 +12,8 @@ export type ConversationScope = 'dm' | 'guild_channel' | 'thread'
 export type ContextBoundary = 'private_dm' | 'guild_channel' | 'guild_thread'
 export type ContextVisibility = 'private' | 'shared'
 export type OutputProfile = 'private_dm' | 'shared_channel' | 'shared_thread'
+export type TaskStatus = 'acknowledged' | 'running' | 'waiting' | 'completed' | 'failed' | 'stopped'
+export const TASK_STATUSES: TaskStatus[] = ['acknowledged', 'running', 'waiting', 'completed', 'failed', 'stopped']
 
 export type TriggerFacts = {
   isDm: boolean
@@ -114,4 +116,21 @@ export function buildConversationMeta(input: ConversationMetaInput): Record<stri
   if (input.replyToChannelId) meta.reply_to_channel_id = input.replyToChannelId
 
   return meta
+}
+
+export function formatTaskStatus(status: TaskStatus, text?: string): string {
+  const label: Record<TaskStatus, string> = {
+    acknowledged: 'Acknowledged',
+    running: 'Running',
+    waiting: 'Waiting',
+    completed: 'Done',
+    failed: 'Failed',
+    stopped: 'Stopped',
+  }
+  const detail = text?.trim()
+  return detail ? `${label[status]}: ${detail}` : label[status]
+}
+
+export function isTaskStatus(value: unknown): value is TaskStatus {
+  return typeof value === 'string' && (TASK_STATUSES as string[]).includes(value)
 }

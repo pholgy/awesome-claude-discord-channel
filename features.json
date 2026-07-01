@@ -56,7 +56,7 @@
     "description": "Add Discord-native long-task lifecycle behavior.",
     "issue_refs": ["#7"],
     "verify_steps": ["bun run verify"],
-    "passes": false
+    "passes": true
   },
   {
     "id": "INT-07",

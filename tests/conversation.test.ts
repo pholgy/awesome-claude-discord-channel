@@ -5,6 +5,8 @@ import {
   channelTypeName,
   contextBoundary,
   contextVisibility,
+  formatTaskStatus,
+  isTaskStatus,
   messageMatchesMentionPattern,
   outputProfile,
   resolveTriggerReason,
@@ -82,6 +84,27 @@ describe('resolveTriggerReason', () => {
       mentionPatternMatched: false,
       activeThread: false,
     })).toBeNull()
+  })
+})
+
+describe('formatTaskStatus', () => {
+  test('formats lifecycle status without extra detail', () => {
+    expect(formatTaskStatus('acknowledged')).toBe('Acknowledged')
+    expect(formatTaskStatus('running')).toBe('Running')
+    expect(formatTaskStatus('waiting')).toBe('Waiting')
+    expect(formatTaskStatus('completed')).toBe('Done')
+    expect(formatTaskStatus('failed')).toBe('Failed')
+    expect(formatTaskStatus('stopped')).toBe('Stopped')
+  })
+
+  test('formats lifecycle status with concise detail', () => {
+    expect(formatTaskStatus('running', 'checking recent messages')).toBe('Running: checking recent messages')
+    expect(formatTaskStatus('waiting', 'need approval')).toBe('Waiting: need approval')
+  })
+
+  test('validates lifecycle status values', () => {
+    expect(isTaskStatus('running')).toBe(true)
+    expect(isTaskStatus('paused')).toBe(false)
   })
 })
 

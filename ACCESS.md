@@ -146,6 +146,23 @@ messages instead of posting repeated updates, and send a final new reply when
 work completes so Discord users get a notification. Large generated output
 should be attached as a file instead of pasted into the channel.
 
+## Task lifecycle
+
+The channel exposes a `task_status` tool for visible task updates:
+
+| Status | Use |
+| --- | --- |
+| `acknowledged` | The request was received. |
+| `running` | Work is in progress. |
+| `waiting` | The task needs permission or user input. |
+| `completed` | Work finished. |
+| `failed` | Work failed with a useful explanation. |
+| `stopped` | Work was cancelled or intentionally stopped. |
+
+`task_status` can send a new status message or edit a previous status message
+when `message_id` is provided. Final answers should still use `reply`, because
+edited messages do not trigger Discord push notifications.
+
 ## Skill reference
 
 | Command | Effect |

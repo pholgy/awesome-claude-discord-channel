@@ -144,6 +144,16 @@ Output contract:
   notification.
 - Large artifacts should be attached as files instead of pasted into chat.
 
+Task lifecycle:
+
+- `task_status` is the visible lifecycle tool for long work.
+- Status values are `acknowledged`, `running`, `waiting`, `completed`,
+  `failed`, and `stopped`.
+- Omit `message_id` to send a new lifecycle message.
+- Pass `message_id` to edit a previous lifecycle message.
+- Completion, failure, and stopped states should still be followed by a normal
+  Discord reply when the user needs a push notification or final answer.
+
 ## Internal Implementation Order
 
 1. #5 - Add inbound conversation metadata and metadata-only goal hook.

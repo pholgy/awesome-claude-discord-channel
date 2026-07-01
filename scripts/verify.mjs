@@ -61,6 +61,12 @@ assert.match(
   'Delivery metadata must explicitly require mcp__discord__reply.',
 );
 
+assert.match(
+  server,
+  /name: 'task_status'/,
+  'MCP tools must expose Discord task lifecycle updates.',
+);
+
 assert.doesNotMatch(
   server,
   /<delivery_contract>/,
@@ -72,6 +78,8 @@ assert.match(conversation, /conversation_scope_id:/);
 assert.match(conversation, /context_boundary:/);
 assert.match(conversation, /context_visibility:/);
 assert.match(conversation, /output_profile:/);
+assert.match(conversation, /formatTaskStatus/);
+assert.match(conversation, /isTaskStatus/);
 assert.match(conversation, /channel_type:/);
 assert.match(conversation, /trigger_reason: input\.triggerReason/);
 assert.match(conversation, /reply_to_message_id/);

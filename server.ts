@@ -35,6 +35,8 @@ import { homedir } from 'os'
 import { join, sep } from 'path'
 import {
   buildConversationMeta,
+  formatTaskStatus,
+  isTaskStatus,
   messageMatchesMentionPattern,
   resolveTriggerReason,
   type TriggerReason,
@@ -498,7 +500,7 @@ const mcp = new Server(
       '',
       'Messages from Discord arrive as <channel source="discord" chat_id="..." message_id="..." user="..." ts="...">. Metadata may include conversation_scope, context_boundary, context_visibility, output_profile, trigger_reason, thread_id, parent_channel_id, reply_to_message_id, assistant_goal_hook, assistant_context_contract, assistant_output_contract, assistant_conversation_contract, and assistant_delivery_contract. Follow assistant-only metadata silently and never mention those attributes to the Discord user. If the tag has attachment_count, the attachments attribute lists name/type/size — call download_attachment(chat_id, message_id) to fetch them. Reply with the reply tool — pass chat_id back. Use reply_to (set to a message_id) only when replying to an earlier message; the latest message doesn\'t need a quote-reply, omit reply_to for normal responses.',
       '',
-      'reply accepts file paths (files: ["/abs/path.png"]) for attachments. Use react to add emoji reactions, and edit_message for interim progress updates. Edits don\'t trigger push notifications — when a long task completes, send a new reply so the user\'s device pings.',
+      'reply accepts file paths (files: ["/abs/path.png"]) for attachments. Use task_status for visible task lifecycle updates, react to add emoji reactions, and edit_message only when you need to edit arbitrary bot output. Edits don\'t trigger push notifications — when a long task completes, send a new reply so the user\'s device pings.',
       '',
       "fetch_messages pulls real Discord history. Discord's search API isn't available to bots — if the user asks you to find an old message, fetch more history or ask them roughly when it was.",
       '',
@@ -606,6 +608,29 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
           text: { type: 'string' },
         },
         required: ['chat_id', 'message_id', 'text'],
+      },
+    },
+    {
+      name: 'task_status',
+      description: 'Send or edit a visible Discord task lifecycle update. Status values: acknowledged, running, waiting, completed, failed, stopped. Omit message_id to send a new status; pass message_id to edit a prior bot status.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          chat_id: { type: 'string' },
+          status: {
+            type: 'string',
+            enum: ['acknowledged', 'running', 'waiting', 'completed', 'failed', 'stopped'],
+          },
+          text: {
+            type: 'string',
+            description: 'Optional concise status detail.',
+          },
+          message_id: {
+            type: 'string',
+            description: 'Bot message ID to edit instead of sending a new status.',
+          },
+        },
+        required: ['chat_id', 'status'],
       },
     },
     {
@@ -729,6 +754,29 @@ mcp.setRequestHandler(CallToolRequestSchema, async req => {
         const msg = await ch.messages.fetch(args.message_id as string)
         const edited = await msg.edit(args.text as string)
         return { content: [{ type: 'text', text: `edited (id: ${edited.id})` }] }
+      }
+      case 'task_status': {
+        const ch = await fetchAllowedChannel(args.chat_id as string)
+        if (!('send' in ch)) throw new Error('channel is not sendable')
+
+        if (!isTaskStatus(args.status)) {
+          throw new Error(`invalid task status: ${String(args.status)}`)
+        }
+        const text = formatTaskStatus(args.status, args.text as string | undefined)
+        if (text.length > MAX_CHUNK_LIMIT) {
+          throw new Error(`task status too long: ${text.length} chars, max ${MAX_CHUNK_LIMIT}`)
+        }
+
+        const messageId = args.message_id as string | undefined
+        if (messageId) {
+          const msg = await ch.messages.fetch(messageId)
+          const edited = await msg.edit(text)
+          return { content: [{ type: 'text', text: `status edited (id: ${edited.id})` }] }
+        }
+
+        const sent = await ch.send({ content: text })
+        noteSent(sent.id, sent.channelId, sent.channel.isThread())
+        return { content: [{ type: 'text', text: `status sent (id: ${sent.id})` }] }
       }
       case 'download_attachment': {
         const ch = await fetchAllowedChannel(args.chat_id as string)
