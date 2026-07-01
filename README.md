@@ -47,6 +47,18 @@ tool names stay familiar.
 See [ACCESS.md](./ACCESS.md) for the full access-control model.
 See [EXTERNAL_CONNECTORS.md](./EXTERNAL_CONNECTORS.md) for the external
 connector risk, approval, and audit model.
+See [CUSTOM_ACTIONS.md](./CUSTOM_ACTIONS.md) for the generic webhook/custom
+action contract.
+See [KNOWLEDGE_SOURCES.md](./KNOWLEDGE_SOURCES.md) for read-only source-backed
+answer behavior.
+See [FILE_ARTIFACTS.md](./FILE_ARTIFACTS.md) for Discord attachment and
+artifact workflow rules.
+See [GITHUB_PROJECTS.md](./GITHUB_PROJECTS.md) for GitHub issue, PR, and check
+workflow rules.
+See [TASKS_CALENDAR.md](./TASKS_CALENDAR.md) for reminder, task, and calendar
+workflow rules.
+See [OPERATIONS.md](./OPERATIONS.md) for operations, deploy, and status
+workflow rules.
 
 1. Create a Discord application and bot in the
    [Discord Developer Portal](https://discord.com/developers/applications).
