@@ -3,6 +3,8 @@ import { ChannelType } from 'discord.js'
 import {
   buildConversationMeta,
   channelTypeName,
+  contextBoundary,
+  contextVisibility,
   messageMatchesMentionPattern,
   resolveTriggerReason,
 } from '../src/conversation.ts'
@@ -108,6 +110,8 @@ describe('buildConversationMeta', () => {
     })).toEqual({
       conversation_scope: 'thread',
       conversation_scope_id: 'thread-1',
+      context_boundary: 'guild_thread',
+      context_visibility: 'shared',
       channel_id: 'thread-1',
       channel_type: 'public_thread',
       trigger_reason: 'reply_to_bot',
@@ -131,6 +135,8 @@ describe('buildConversationMeta', () => {
     })).toEqual({
       conversation_scope: 'dm',
       conversation_scope_id: 'dm-1',
+      context_boundary: 'private_dm',
+      context_visibility: 'private',
       channel_id: 'dm-1',
       channel_type: 'dm',
       trigger_reason: 'dm',
@@ -141,5 +147,13 @@ describe('buildConversationMeta', () => {
   test('names known Discord channel types', () => {
     expect(channelTypeName(ChannelType.GuildText)).toBe('guild_text')
     expect(channelTypeName(ChannelType.GuildAnnouncement)).toBe('guild_announcement')
+  })
+
+  test('classifies channel boundaries and visibility', () => {
+    expect(contextBoundary({ isDm: true, isThread: false })).toBe('private_dm')
+    expect(contextBoundary({ isDm: false, isThread: false })).toBe('guild_channel')
+    expect(contextBoundary({ isDm: false, isThread: true })).toBe('guild_thread')
+    expect(contextVisibility({ isDm: true })).toBe('private')
+    expect(contextVisibility({ isDm: false })).toBe('shared')
   })
 })

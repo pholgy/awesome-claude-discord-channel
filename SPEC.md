@@ -79,6 +79,9 @@ changing the raw message content:
 
 - `conversation_scope`: `dm`, `guild_channel`, or `thread`.
 - `conversation_scope_id`: Discord channel/thread id for the current scope.
+- `context_boundary`: `private_dm`, `guild_channel`, or `guild_thread`.
+- `context_visibility`: `private` for DMs, `shared` for guild channels and
+  threads.
 - `channel_id`: Discord channel id where the inbound message arrived.
 - `channel_type`: stable text name for the Discord channel type when known.
 - `guild_id`: guild id for guild messages.
@@ -113,6 +116,19 @@ Conversation contract:
 
 These hooks are a prompt-quality layer. They do not replace server-side access
 control, tests, or approval checks.
+
+Context contract:
+
+- Private DM context is private to that DM unless the Discord user explicitly
+  asks to copy or summarize it elsewhere.
+- Guild channel context is shared channel context; answers should not assume
+  private knowledge from DMs or unrelated channels.
+- Thread context is scoped to the thread. A thread can reference its parent
+  channel when the user asks or when the message itself is a reply/link, but
+  parent-channel history should not be silently treated as thread-local truth.
+- `fetch_messages` history is request-scoped evidence, not durable memory.
+  The assistant should use it for the current answer and say when the fetched
+  window is incomplete.
 
 ## Internal Implementation Order
 

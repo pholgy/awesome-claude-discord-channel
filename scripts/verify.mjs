@@ -45,6 +45,12 @@ assert.match(
 
 assert.match(
   server,
+  /assistant_context_contract:/,
+  'Inbound Discord messages must carry assistant-only context boundary metadata.',
+);
+
+assert.match(
+  server,
   /mcp__discord__reply/,
   'Delivery metadata must explicitly require mcp__discord__reply.',
 );
@@ -57,6 +63,8 @@ assert.doesNotMatch(
 
 assert.match(conversation, /conversation_scope:/);
 assert.match(conversation, /conversation_scope_id:/);
+assert.match(conversation, /context_boundary:/);
+assert.match(conversation, /context_visibility:/);
 assert.match(conversation, /channel_type:/);
 assert.match(conversation, /trigger_reason: input\.triggerReason/);
 assert.match(conversation, /reply_to_message_id/);

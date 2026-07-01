@@ -93,6 +93,27 @@ allowed by that channel policy, and for unaddressed messages when
 access policy; those changes still have to come from the local `/discord:access`
 skill.
 
+## Context boundaries
+
+Delivered Discord messages include context metadata:
+
+| Field | Values |
+| --- | --- |
+| `conversation_scope` | `dm`, `guild_channel`, `thread` |
+| `context_boundary` | `private_dm`, `guild_channel`, `guild_thread` |
+| `context_visibility` | `private`, `shared` |
+
+The intended boundary is strict:
+
+- DMs are private. DM context should not appear in guild channels unless the
+  user explicitly asks to move or summarize it.
+- Guild channels are shared. The bot should answer from the current channel
+  context and ask when it needs missing background.
+- Threads are scoped to the thread. A thread may point back to its parent
+  channel, but parent-channel history is not automatically the same context.
+- `fetch_messages` is a scoped lookback tool. It can provide evidence for the
+  current answer, but it is not durable memory.
+
 ## Delivery
 
 Configure outbound behavior with `/discord:access set <key> <value>`.

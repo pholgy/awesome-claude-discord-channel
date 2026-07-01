@@ -9,6 +9,8 @@ export type TriggerReason =
   | 'watch_mode'
 
 export type ConversationScope = 'dm' | 'guild_channel' | 'thread'
+export type ContextBoundary = 'private_dm' | 'guild_channel' | 'guild_thread'
+export type ContextVisibility = 'private' | 'shared'
 
 export type TriggerFacts = {
   isDm: boolean
@@ -56,6 +58,15 @@ export function conversationScope(input: Pick<ConversationMetaInput, 'isDm' | 'i
   return input.isThread ? 'thread' : 'guild_channel'
 }
 
+export function contextBoundary(input: Pick<ConversationMetaInput, 'isDm' | 'isThread'>): ContextBoundary {
+  if (input.isDm) return 'private_dm'
+  return input.isThread ? 'guild_thread' : 'guild_channel'
+}
+
+export function contextVisibility(input: Pick<ConversationMetaInput, 'isDm'>): ContextVisibility {
+  return input.isDm ? 'private' : 'shared'
+}
+
 export function channelTypeName(type: ChannelType): string {
   switch (type) {
     case ChannelType.DM:
@@ -79,6 +90,8 @@ export function buildConversationMeta(input: ConversationMetaInput): Record<stri
   const meta: Record<string, string> = {
     conversation_scope: conversationScope(input),
     conversation_scope_id: input.channelId,
+    context_boundary: contextBoundary(input),
+    context_visibility: contextVisibility(input),
     channel_id: input.channelId,
     channel_type: channelTypeName(input.channelType),
     trigger_reason: input.triggerReason,

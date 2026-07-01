@@ -40,7 +40,7 @@
     "description": "Define and enforce DM, channel, thread, and task context isolation boundaries.",
     "issue_refs": ["#6"],
     "verify_steps": ["bun run verify"],
-    "passes": false
+    "passes": true
   },
   {
     "id": "INT-05",
