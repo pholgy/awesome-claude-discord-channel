@@ -15,6 +15,7 @@ describe('resolveTriggerReason', () => {
       mentionedBot: false,
       repliedToBot: false,
       mentionPatternMatched: false,
+      activeThread: false,
     })).toBe('dm')
   })
 
@@ -25,6 +26,7 @@ describe('resolveTriggerReason', () => {
       mentionedBot: true,
       repliedToBot: true,
       mentionPatternMatched: true,
+      activeThread: true,
     })).toBe('direct_mention')
 
     expect(resolveTriggerReason({
@@ -33,6 +35,7 @@ describe('resolveTriggerReason', () => {
       mentionedBot: false,
       repliedToBot: true,
       mentionPatternMatched: true,
+      activeThread: true,
     })).toBe('reply_to_bot')
 
     expect(resolveTriggerReason({
@@ -41,7 +44,19 @@ describe('resolveTriggerReason', () => {
       mentionedBot: false,
       repliedToBot: false,
       mentionPatternMatched: true,
+      activeThread: true,
     })).toBe('mention_pattern')
+  })
+
+  test('lets active threads continue without repeated mentions', () => {
+    expect(resolveTriggerReason({
+      isDm: false,
+      requireMention: true,
+      mentionedBot: false,
+      repliedToBot: false,
+      mentionPatternMatched: false,
+      activeThread: true,
+    })).toBe('active_thread')
   })
 
   test('uses watch mode only when mention is not required', () => {
@@ -51,6 +66,7 @@ describe('resolveTriggerReason', () => {
       mentionedBot: false,
       repliedToBot: false,
       mentionPatternMatched: false,
+      activeThread: true,
     })).toBe('watch_mode')
   })
 
@@ -61,6 +77,7 @@ describe('resolveTriggerReason', () => {
       mentionedBot: false,
       repliedToBot: false,
       mentionPatternMatched: false,
+      activeThread: false,
     })).toBeNull()
   })
 })

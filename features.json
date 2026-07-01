@@ -32,7 +32,7 @@
     "description": "Implement explicit trigger and participation reasons.",
     "issue_refs": ["#4"],
     "verify_steps": ["bun run verify"],
-    "passes": false
+    "passes": true
   },
   {
     "id": "INT-04",

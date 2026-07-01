@@ -65,12 +65,33 @@ In channels with `requireMention: true`, any of the following triggers the bot:
 - A structured `@botname` mention (typed via Discord's autocomplete)
 - A reply to one of the bot's recent messages
 - A match against any regex in `mentionPatterns`
+- A message in a thread where the bot has recently replied
 
 Example regex setup for a nickname trigger:
 
 ```
 /discord:access set mentionPatterns '["^hey claude\\b", "\\bassistant\\b"]'
 ```
+
+## Trigger reasons
+
+Delivered Discord messages include `trigger_reason` metadata so Claude can tell
+why the message reached it:
+
+| Reason | Meaning |
+| --- | --- |
+| `dm` | Approved direct message. |
+| `direct_mention` | Guild message directly mentioned the bot. |
+| `reply_to_bot` | Guild message replied to a recent bot message. |
+| `mention_pattern` | Guild message matched a configured nickname/regex pattern. |
+| `active_thread` | Thread message continued a thread where the bot recently replied. |
+| `watch_mode` | Channel was configured with `--no-mention`, so every allowed message is processed. |
+
+The bot stays silent in guild channels that are not enabled, from senders not
+allowed by that channel policy, and for unaddressed messages when
+`requireMention` is enabled. Discord messages cannot approve pairings or edit
+access policy; those changes still have to come from the local `/discord:access`
+skill.
 
 ## Delivery
 

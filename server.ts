@@ -226,16 +226,24 @@ type GateResult =
 // Track message IDs we recently sent, so reply-to-bot in guild channels
 // counts as a mention without needing fetchReference().
 const recentSentIds = new Set<string>()
+const recentActiveThreadIds = new Set<string>()
 const RECENT_SENT_CAP = 200
+const RECENT_ACTIVE_THREAD_CAP = 100
 
 const dmChannelUsers = new Map<string, string>()
 
-function noteSent(id: string): void {
+function trimSet(set: Set<string>, cap: number): void {
+  if (set.size <= cap) return
+  const first = set.values().next().value
+  if (first) set.delete(first)
+}
+
+function noteSent(id: string, channelId?: string, isThread = false): void {
   recentSentIds.add(id)
-  if (recentSentIds.size > RECENT_SENT_CAP) {
-    // Sets iterate in insertion order — this drops the oldest.
-    const first = recentSentIds.values().next().value
-    if (first) recentSentIds.delete(first)
+  trimSet(recentSentIds, RECENT_SENT_CAP)
+  if (channelId && isThread) {
+    recentActiveThreadIds.add(channelId)
+    trimSet(recentActiveThreadIds, RECENT_ACTIVE_THREAD_CAP)
   }
 }
 
@@ -301,6 +309,7 @@ async function gate(msg: Message): Promise<GateResult> {
     mentionedBot: false,
     repliedToBot: false,
     mentionPatternMatched: false,
+    activeThread: msg.channel.isThread() && recentActiveThreadIds.has(msg.channelId),
   })
   if (requireMention) {
     triggerReason = await mentionTriggerReason(msg, access.mentionPatterns)
@@ -318,6 +327,7 @@ async function mentionTriggerReason(msg: Message, extraPatterns?: string[]): Pro
       mentionedBot,
       repliedToBot: false,
       mentionPatternMatched: false,
+      activeThread: false,
     })
   }
 
@@ -344,6 +354,7 @@ async function mentionTriggerReason(msg: Message, extraPatterns?: string[]): Pro
     mentionedBot: false,
     repliedToBot,
     mentionPatternMatched: messageMatchesMentionPattern(msg.content, extraPatterns),
+    activeThread: msg.channel.isThread() && recentActiveThreadIds.has(msg.channelId),
   })
 }
 
@@ -670,7 +681,7 @@ mcp.setRequestHandler(CallToolRequestSchema, async req => {
                 ? { reply: { messageReference: reply_to, failIfNotExists: false } }
                 : {}),
             })
-            noteSent(sent.id)
+            noteSent(sent.id, sent.channelId, sent.channel.isThread())
             sentIds.push(sent.id)
           }
         } catch (err) {

@@ -5,6 +5,7 @@ export type TriggerReason =
   | 'direct_mention'
   | 'reply_to_bot'
   | 'mention_pattern'
+  | 'active_thread'
   | 'watch_mode'
 
 export type ConversationScope = 'dm' | 'guild_channel' | 'thread'
@@ -15,6 +16,7 @@ export type TriggerFacts = {
   mentionedBot: boolean
   repliedToBot: boolean
   mentionPatternMatched: boolean
+  activeThread: boolean
 }
 
 export type ConversationMetaInput = {
@@ -36,6 +38,7 @@ export function resolveTriggerReason(facts: TriggerFacts): TriggerReason | null 
   if (facts.mentionedBot) return 'direct_mention'
   if (facts.repliedToBot) return 'reply_to_bot'
   if (facts.mentionPatternMatched) return 'mention_pattern'
+  if (facts.activeThread) return 'active_thread'
   return null
 }
 

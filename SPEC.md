@@ -88,7 +88,7 @@ changing the raw message content:
   reply.
 - `reply_to_channel_id`: referenced channel id when Discord provides it.
 - `trigger_reason`: `dm`, `direct_mention`, `reply_to_bot`,
-  `mention_pattern`, or `watch_mode`.
+  `mention_pattern`, `active_thread`, or `watch_mode`.
 - `display_name`: server display name when available, otherwise the Discord
   global name or username.
 
