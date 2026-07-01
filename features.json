@@ -64,7 +64,7 @@
     "description": "Add Discord user controls for active conversations.",
     "issue_refs": ["#8"],
     "verify_steps": ["bun run verify"],
-    "passes": false
+    "passes": true
   },
   {
     "id": "EXT-01",

@@ -67,6 +67,11 @@ assert.match(
   'MCP tools must expose Discord task lifecycle updates.',
 );
 
+assert.match(server, /task:stop/);
+assert.match(server, /task:continue/);
+assert.match(server, /task:summarize/);
+assert.match(server, /assistant_control_contract:/);
+
 assert.doesNotMatch(
   server,
   /<delivery_contract>/,
@@ -80,6 +85,7 @@ assert.match(conversation, /context_visibility:/);
 assert.match(conversation, /output_profile:/);
 assert.match(conversation, /formatTaskStatus/);
 assert.match(conversation, /isTaskStatus/);
+assert.match(conversation, /isTaskControlAction/);
 assert.match(conversation, /channel_type:/);
 assert.match(conversation, /trigger_reason: input\.triggerReason/);
 assert.match(conversation, /reply_to_message_id/);

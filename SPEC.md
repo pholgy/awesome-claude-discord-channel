@@ -154,6 +154,17 @@ Task lifecycle:
 - Completion, failure, and stopped states should still be followed by a normal
   Discord reply when the user needs a push notification or final answer.
 
+Task controls:
+
+- Active `task_status` messages include Stop, Continue, and Summarize buttons.
+- Control clicks are authorized against the same DM allowlist or enabled guild
+  channel policy used for inbound Discord messages.
+- A control click is delivered to the assistant as an assistant-visible channel
+  notification with `trigger_reason=control_button` and `control_action`.
+- Terminal lifecycle statuses remove controls when edited.
+- Quiet mode, save/forget context, and move-to-thread controls are planned
+  follow-up controls after task/session state exists.
+
 ## Internal Implementation Order
 
 1. #5 - Add inbound conversation metadata and metadata-only goal hook.

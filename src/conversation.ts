@@ -6,6 +6,7 @@ export type TriggerReason =
   | 'reply_to_bot'
   | 'mention_pattern'
   | 'active_thread'
+  | 'control_button'
   | 'watch_mode'
 
 export type ConversationScope = 'dm' | 'guild_channel' | 'thread'
@@ -14,6 +15,8 @@ export type ContextVisibility = 'private' | 'shared'
 export type OutputProfile = 'private_dm' | 'shared_channel' | 'shared_thread'
 export type TaskStatus = 'acknowledged' | 'running' | 'waiting' | 'completed' | 'failed' | 'stopped'
 export const TASK_STATUSES: TaskStatus[] = ['acknowledged', 'running', 'waiting', 'completed', 'failed', 'stopped']
+export type TaskControlAction = 'stop' | 'continue' | 'summarize'
+export const TASK_CONTROL_ACTIONS: TaskControlAction[] = ['stop', 'continue', 'summarize']
 
 export type TriggerFacts = {
   isDm: boolean
@@ -133,4 +136,21 @@ export function formatTaskStatus(status: TaskStatus, text?: string): string {
 
 export function isTaskStatus(value: unknown): value is TaskStatus {
   return typeof value === 'string' && (TASK_STATUSES as string[]).includes(value)
+}
+
+export function isActiveTaskStatus(status: TaskStatus): boolean {
+  return status === 'acknowledged' || status === 'running' || status === 'waiting'
+}
+
+export function isTaskControlAction(value: unknown): value is TaskControlAction {
+  return typeof value === 'string' && (TASK_CONTROL_ACTIONS as string[]).includes(value)
+}
+
+export function formatTaskControlRequest(action: TaskControlAction): string {
+  const label: Record<TaskControlAction, string> = {
+    stop: 'Stop requested',
+    continue: 'Continue requested',
+    summarize: 'Summary requested',
+  }
+  return label[action]
 }

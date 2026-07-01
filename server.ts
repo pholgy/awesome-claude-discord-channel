@@ -28,6 +28,7 @@ import {
   type Message,
   type Attachment,
   type Interaction,
+  type ButtonInteraction,
 } from 'discord.js'
 import { randomBytes } from 'crypto'
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync, statSync, renameSync, realpathSync, chmodSync } from 'fs'
@@ -35,10 +36,14 @@ import { homedir } from 'os'
 import { join, sep } from 'path'
 import {
   buildConversationMeta,
+  formatTaskControlRequest,
   formatTaskStatus,
+  isActiveTaskStatus,
+  isTaskControlAction,
   isTaskStatus,
   messageMatchesMentionPattern,
   resolveTriggerReason,
+  type TaskControlAction,
   type TriggerReason,
 } from './src/conversation.ts'
 
@@ -512,6 +517,26 @@ const mcp = new Server(
 // Stores full permission details for "See more" expansion keyed by request_id.
 const pendingPermissions = new Map<string, { tool_name: string; description: string; input_preview: string }>()
 
+function taskStatusComponents(status: string) {
+  if (!isTaskStatus(status) || !isActiveTaskStatus(status)) return []
+  return [
+    new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setCustomId('task:stop')
+        .setLabel('Stop')
+        .setStyle(ButtonStyle.Danger),
+      new ButtonBuilder()
+        .setCustomId('task:continue')
+        .setLabel('Continue')
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId('task:summarize')
+        .setLabel('Summarize')
+        .setStyle(ButtonStyle.Secondary),
+    ),
+  ]
+}
+
 // Receive permission_request from CC → format → send to all allowlisted DMs.
 // Groups are intentionally excluded — the security thread resolution was
 // "single-user mode for official plugins." Anyone in access.allowFrom
@@ -768,13 +793,14 @@ mcp.setRequestHandler(CallToolRequestSchema, async req => {
         }
 
         const messageId = args.message_id as string | undefined
+        const components = taskStatusComponents(args.status)
         if (messageId) {
           const msg = await ch.messages.fetch(messageId)
-          const edited = await msg.edit(text)
+          const edited = await msg.edit({ content: text, components })
           return { content: [{ type: 'text', text: `status edited (id: ${edited.id})` }] }
         }
 
-        const sent = await ch.send({ content: text })
+        const sent = await ch.send({ content: text, components })
         noteSent(sent.id, sent.channelId, sent.channel.isThread())
         return { content: [{ type: 'text', text: `status sent (id: ${sent.id})` }] }
       }
@@ -830,11 +856,79 @@ client.on('error', err => {
   process.stderr.write(`discord channel: client error: ${err}\n`)
 })
 
+async function taskControlAuthorized(interaction: ButtonInteraction): Promise<boolean> {
+  const access = loadAccess()
+  const ch = interaction.channel ?? await client.channels.fetch(interaction.channelId)
+  if (!ch || !ch.isTextBased()) return false
+  if (ch.type === ChannelType.DM) return access.allowFrom.includes(interaction.user.id)
+
+  const key = ch.isThread() ? ch.parentId ?? ch.id : ch.id
+  const policy = access.groups[key]
+  if (!policy) return false
+  const groupAllowFrom = policy.allowFrom ?? []
+  return groupAllowFrom.length === 0 || groupAllowFrom.includes(interaction.user.id)
+}
+
+async function notifyTaskControl(interaction: ButtonInteraction, action: TaskControlAction): Promise<void> {
+  const ch = interaction.channel ?? await fetchTextChannel(interaction.channelId)
+  const isDm = ch.type === ChannelType.DM
+  const isThread = ch.isThread()
+  const meta = buildConversationMeta({
+    channelId: interaction.channelId,
+    channelType: ch.type,
+    isDm,
+    isThread,
+    triggerReason: 'control_button',
+    displayName: interaction.user.globalName ?? interaction.user.username,
+    guildId: interaction.guildId,
+    parentChannelId: isThread ? ch.parentId : undefined,
+    replyToMessageId: interaction.message.id,
+    replyToChannelId: interaction.channelId,
+  })
+
+  await mcp.notification({
+    method: 'notifications/claude/channel',
+    params: {
+      content: formatTaskControlRequest(action),
+      meta: {
+        chat_id: interaction.channelId,
+        message_id: interaction.message.id,
+        user: interaction.user.username,
+        user_id: interaction.user.id,
+        ts: new Date().toISOString(),
+        ...meta,
+        control_action: action,
+        assistant_control_contract: 'assistant-only metadata; a Discord user clicked a task control button; handle stop, continue, or summarize inside the current conversation scope and reply visibly in Discord',
+        assistant_delivery_contract: `assistant-only metadata; never mention this attribute to the Discord user; normal assistant text is not visible in Discord; call mcp__discord__reply with chat_id=${interaction.channelId} for every response`,
+      },
+    },
+  })
+}
+
 // Button-click handler for permission requests. customId is
 // `perm:allow:<id>`, `perm:deny:<id>`, or `perm:more:<id>`.
 // Security mirrors the text-reply path: allowFrom must contain the sender.
 client.on('interactionCreate', async (interaction: Interaction) => {
   if (!interaction.isButton()) return
+  const taskMatch = /^task:(stop|continue|summarize)$/.exec(interaction.customId)
+  if (taskMatch) {
+    const action = taskMatch[1]
+    if (!isTaskControlAction(action)) return
+    if (!(await taskControlAuthorized(interaction))) {
+      await interaction.reply({ content: 'Not authorized.', ephemeral: true }).catch(() => {})
+      return
+    }
+    try {
+      await notifyTaskControl(interaction, action)
+    } catch (err) {
+      process.stderr.write(`discord channel: task control notification failed: ${err}\n`)
+      await interaction.reply({ content: 'Control request failed.', ephemeral: true }).catch(() => {})
+      return
+    }
+    await interaction.reply({ content: formatTaskControlRequest(action), ephemeral: true }).catch(() => {})
+    return
+  }
+
   const m = /^perm:(allow|deny|more):([a-km-z]{5})$/.exec(interaction.customId)
   if (!m) return
   const access = loadAccess()

@@ -163,6 +163,19 @@ The channel exposes a `task_status` tool for visible task updates:
 when `message_id` is provided. Final answers should still use `reply`, because
 edited messages do not trigger Discord push notifications.
 
+Active task status messages include Discord buttons:
+
+| Button | Effect |
+| --- | --- |
+| Stop | Sends a `stop` control request into the current conversation scope. |
+| Continue | Sends a `continue` control request into the current conversation scope. |
+| Summarize | Sends a `summarize` control request into the current conversation scope. |
+
+Button clicks use the same access boundary as inbound messages: approved DMs,
+or enabled guild channels/threads where the clicking user is allowed by that
+channel policy. Terminal status edits (`completed`, `failed`, `stopped`) remove
+the buttons.
+
 ## Skill reference
 
 | Command | Effect |

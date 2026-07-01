@@ -5,7 +5,10 @@ import {
   channelTypeName,
   contextBoundary,
   contextVisibility,
+  formatTaskControlRequest,
   formatTaskStatus,
+  isActiveTaskStatus,
+  isTaskControlAction,
   isTaskStatus,
   messageMatchesMentionPattern,
   outputProfile,
@@ -105,6 +108,30 @@ describe('formatTaskStatus', () => {
   test('validates lifecycle status values', () => {
     expect(isTaskStatus('running')).toBe(true)
     expect(isTaskStatus('paused')).toBe(false)
+  })
+
+  test('identifies active lifecycle statuses', () => {
+    expect(isActiveTaskStatus('acknowledged')).toBe(true)
+    expect(isActiveTaskStatus('running')).toBe(true)
+    expect(isActiveTaskStatus('waiting')).toBe(true)
+    expect(isActiveTaskStatus('completed')).toBe(false)
+    expect(isActiveTaskStatus('failed')).toBe(false)
+    expect(isActiveTaskStatus('stopped')).toBe(false)
+  })
+})
+
+describe('task controls', () => {
+  test('validates control actions', () => {
+    expect(isTaskControlAction('stop')).toBe(true)
+    expect(isTaskControlAction('continue')).toBe(true)
+    expect(isTaskControlAction('summarize')).toBe(true)
+    expect(isTaskControlAction('delete')).toBe(false)
+  })
+
+  test('formats control requests', () => {
+    expect(formatTaskControlRequest('stop')).toBe('Stop requested')
+    expect(formatTaskControlRequest('continue')).toBe('Continue requested')
+    expect(formatTaskControlRequest('summarize')).toBe('Summary requested')
   })
 })
 
