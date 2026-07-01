@@ -55,6 +55,8 @@ See [FILE_ARTIFACTS.md](./FILE_ARTIFACTS.md) for Discord attachment and
 artifact workflow rules.
 See [GITHUB_PROJECTS.md](./GITHUB_PROJECTS.md) for GitHub issue, PR, and check
 workflow rules.
+See [TASKS_CALENDAR.md](./TASKS_CALENDAR.md) for reminder, task, and calendar
+workflow rules.
 
 1. Create a Discord application and bot in the
    [Discord Developer Portal](https://discord.com/developers/applications).
